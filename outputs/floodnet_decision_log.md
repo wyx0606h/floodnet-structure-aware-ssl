@@ -27,6 +27,7 @@
 | D019 | 2026-06-24 | Active | 2021 历史基线采用 DeepLabV3+/EfficientNet-B3 的训练逻辑复现 | 建立与直接相关工作的联系，同时避免将旧模型当作唯一强基线 | 与 SegFormer-B0、Mean Teacher 和 UniMatch 分层比较 |
 | D020 | 2026-06-24 | Active | 先在本地完成代码、单元测试和四图像过拟合，再租用 GPU | 降低付费排查数据或实现错误的成本 | 本地门未通过不得启动正式长训练 |
 | D021 | 2026-06-24 | Active | SegFormer-B0 用于前期核心假设验证，第二骨干延后 | 当前重点是验证结构伪标签而非追逐最新骨干 | 仅在 M6 通过后增加更新或不同架构骨干 |
+| D022 | 2026-06-24 | Active | 本地规范项目根目录为 `E:\CodexProjects\floodnet-structure-aware-ssl` | 与现有 `explore_world` 一样放在 E 盘，并让 Codex App 以保存项目方式管理 | 后续代码、配置和状态文件均在该项目中提交 |
 
 ## 新决定模板
 

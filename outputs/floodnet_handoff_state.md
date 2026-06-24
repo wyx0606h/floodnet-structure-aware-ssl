@@ -35,7 +35,10 @@
 - [x] 明确第一阶段核心实验仅基于 FloodNet；
 - [x] 创建并上传私有远程仓库 `wyx0606h/floodnet-structure-aware-ssl`；
 - [x] 只读审计七个 Track 1 ZIP 的目录、数量、配对、重叠和类别映射；
-- [x] 确认 2021 半监督论文使用 DeepLabV3+/EfficientNet-B3 与 398/1047 协议。
+- [x] 确认 2021 半监督论文使用 DeepLabV3+/EfficientNet-B3 与 398/1047 协议；
+- [x] 在 `E:\CodexProjects\floodnet-structure-aware-ssl` 建立并登记 Codex 本地项目；
+- [x] 创建并置顶项目线程“FloodNet 半监督分割实验”；
+- [x] 将挑战版协议更新推送至 GitHub 提交 `538ed01`。
 
 ## 4. 尚未完成
 
@@ -48,7 +51,7 @@
 
 ## 5. 下一步
 
-1. 在 E 盘建立项目工作区并同步 GitHub 仓库；
+1. 在项目线程中确认合并解压七个 ZIP 的目标路径；
 2. 合并解压七个 ZIP 到仓库外的数据目录；
 3. 生成数据统计和 278/60/60 split；
 4. 实现 Dataset、指标、增强和滑窗推理；
@@ -86,4 +89,5 @@ M1：数据与监督基线。通过条件详见 `floodnet_codex_8week_execution_
 - D013：第一阶段全部核心方法与基线先在 FloodNet 上完成；
 - D014：Git 仓库中的状态文件是跨线程、跨机器研究连续性的事实来源；
 - D016：挑战版官方 Validation/Test 无公开掩码，本地结论采用 278/60/60 固定划分；
-- D017：本地代码、单元测试和四图像过拟合通过后才租用 GPU。
+- D017：本地代码、单元测试和四图像过拟合通过后才租用 GPU；
+- D022：本地工程的规范项目根目录为 `E:\CodexProjects\floodnet-structure-aware-ssl`。
