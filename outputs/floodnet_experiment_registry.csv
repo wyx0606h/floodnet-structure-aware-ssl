@@ -1,0 +1,1 @@
+run_id,date,status,stage,method,label_ratio,seed,variant,backbone,crop_size,config_path,git_commit,command,validation_miou9,test_miou9,affected_miou,state_f1,boundary_f1,pseudo_miou,coverage,peak_vram_gb,checkpoint_path,output_path,notes
