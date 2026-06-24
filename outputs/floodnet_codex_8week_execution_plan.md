@@ -30,7 +30,7 @@
 
 | 里程碑 | 截止日期 | 最低交付 |
 |---|---|---|
-| M1 数据与监督基线 | 2026-07-01 | 可复现 100% SegFormer-B0 与可信评测 |
+| M1 数据与监督基线 | 2026-07-01 | 可复现 Local Full Supervision SegFormer-B0 与可信评测 |
 | M2 半监督基线 | 2026-07-08 | 5%/10% Labeled Only、Pseudo Label、Mean Teacher |
 | M3 层次分解 | 2026-07-15 | Object-State 指标与消融 |
 | M4 边界建模 | 2026-07-22 | Boundary F1 与边界一致性实验 |
@@ -45,10 +45,10 @@
 
 ### 3.1 默认工程结构
 
-若尚无实验仓库，Codex 在 Week 1 建立独立工程目录，默认使用：
+实验工程直接位于本仓库，默认使用：
 
 ```text
-work/floodnet_project/
+floodnet-structure-aware-ssl/
 ├── configs/
 ├── data/
 ├── datasets/
@@ -63,6 +63,8 @@ work/floodnet_project/
 ```
 
 原始 FloodNet 数据不得复制、移动或修改。通过配置项 `DATA_ROOT` 指向现有数据路径。
+
+本地 Windows 数据源当前为七个 Track 1 ZIP 分包。合并解压后的数据根目录必须位于仓库之外；服务器使用独立数据盘路径。
 
 ### 3.2 配置优先
 
@@ -126,30 +128,33 @@ YYYYMMDD_method_labelpct_seed_variant
 
 ### 4.1 目标
 
-建立可信数据管线、评测实现和 100% 监督 SegFormer-B0 基线。Week 1 结束前不实现半监督或新模块。
+先在本地建立可信数据管线、评测实现和可训练工程，再在付费 GPU 上运行 Local Full Supervision SegFormer-B0 基线。Week 1 结束前不实现关系模块。
 
 ### 4.2 任务
 
-1. 定位 FloodNet 数据根目录，不移动原始文件；
-2. 枚举训练、验证、测试图像和掩码；
+1. 将七个 ZIP 合并解压到仓库外的单一只读数据根目录；
+2. 枚举 398 张有标签、1047 张无标签和无公开掩码的 Validation/Test；
 3. 检查图像-掩码一一对应；
 4. 确认掩码格式、颜色表和类别 ID；
 5. 统计每类像素数、图像覆盖数和空类别；
-6. 检查重复图像、同名冲突和潜在 split 泄漏；
+6. 检查重复图像、连续航拍近重复和潜在 split 泄漏；
 7. 随机可视化至少 30 组图像/掩码；
-8. 实现 FloodNet Dataset 和统一空间增强；
-9. 实现 mIoU-9、mIoU-10、Macro-F1、分类别 IoU；
-10. 实现 Building/Road 合并 IoU 和 State F1；
-11. 实现边界真值生成和 Boundary F1 单元测试；
-12. 跑通 SegFormer-B0 100% 监督训练；
+8. 生成并版本化固定 278/60/60 多标签分层划分；
+9. 实现 FloodNet Dataset 和统一空间增强；
+10. 实现 mIoU-9、mIoU-10、Macro-F1、分类别 IoU；
+11. 实现 Building/Road 合并 IoU 和 State F1；
+12. 实现边界真值生成和 Boundary F1 单元测试；
 13. 实现滑动窗口测试和整图概率融合；
-14. 重复同配置短跑两次，确认指标波动合理。
+14. 在 CPU 或本地可用设备完成加载、前向、反向和四图像过拟合测试；
+15. 本地门通过后租用 GPU，运行 SegFormer-B0 Local Full Supervision；
+16. 重复同配置短跑两次，确认指标波动合理。
 
 ### 4.3 测试
 
 - 所有 mask ID 必须位于合法类别范围；
 - 随机空间增强后图像与掩码保持对齐；
 - 手工构造小掩码验证 IoU、F1 和边界指标；
+- 四张训练图像必须可以被模型明显过拟合；
 - 同一 checkpoint 重复测试结果完全一致；
 - 训练、验证、测试 ID 集合无交集。
 
@@ -158,7 +163,7 @@ YYYYMMDD_method_labelpct_seed_variant
 - 数据审计报告；
 - 类别统计 CSV；
 - 可视化样本图；
-- 100% 监督基线配置与 checkpoint；
+- 278 张 Local Train 全监督基线配置与 checkpoint；
 - 首份指标报告；
 - 精确训练与测试命令。
 
@@ -167,7 +172,9 @@ YYYYMMDD_method_labelpct_seed_variant
 必须同时满足：
 
 - 数据完整且无可见泄漏；
+- 固定 278/60/60 split 已版本化；
 - 指标通过单元测试；
+- 四图像过拟合测试通过；
 - 训练损失正常下降；
 - 验证和测试输出可重复；
 - 分类别结果数量级与已发表 FloodNet 结果不存在明显异常。
@@ -186,11 +193,13 @@ YYYYMMDD_method_labelpct_seed_variant
 
 ### 5.2 数据划分
 
-1. 为 1%、5%、10%、25% 生成多标签分层 split；
+1. 以 278 张 Local Train 为分母，为 5%、10%、25% 生成多标签分层 split；1% 仅作可选压力测试；
 2. 每个比例固定三个种子；
 3. 优先保证受淹建筑和受淹道路获得基本覆盖；
 4. 保存图像 ID 和每类覆盖统计；
-5. 另建 398/1047 历史协议。
+5. 无标签池由 1047 张官方无标签图像和 Local Train 中被隐藏标签的图像组成；
+6. Local Validation/Test 永不进入无标签池；
+7. 另建 DeepLabV3+/EfficientNet-B3 的 398/1047 历史逻辑复现。
 
 ### 5.3 实验顺序
 
@@ -200,7 +209,7 @@ YYYYMMDD_method_labelpct_seed_variant
 4. 10% Mean Teacher，seed 1；
 5. 5% Pseudo Label，seed 1；
 6. 5% Mean Teacher，seed 1；
-7. 流程稳定后补 1%、25%；
+7. 流程稳定后补 25%；若关键类别覆盖允许，再做可选 1% 压力测试；
 8. 最后补 seed 2、3。
 
 ### 5.4 必须记录
@@ -407,7 +416,7 @@ M2 未通过前不得实现关系模块。
 1. 完成 UniMatch 复现或兼容实现；
 2. 若 UniMatch 无法可靠复现，完成 CPS 或 ST++ 并记录原因；
 3. 冻结完整方法超参数；
-4. 运行 1%、5%、10%、25%；
+4. 运行 5%、10%、25%；核心完成后再决定是否运行可选 1%；
 5. 优先完成 5%、10% 三种子；
 6. 完成主模块消融；
 7. 完成结构筛选消融；

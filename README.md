@@ -15,11 +15,13 @@
 
 ## 数据集范围
 
-- **FloodNet**：主训练、验证与测试数据集，承载全部核心结论；
+- **FloodNet Challenge Track 1**：当前主数据版本。七个 ZIP 合计包含 398 张有掩码训练图像、1047 张无标签训练图像、450 张无公开掩码验证图像和 448 张无公开掩码测试图像；
 - **AIFloodSense**：仅在 FloodNet 核心方法通过阶段门后，用于外部预训练或跨地区泛化验证；
 - **UrbanSARFloods**：本轮不进入主实验，保留为未来跨模态研究方向。
 
 数据集、模型权重和训练输出不提交到 Git 仓库。
+
+当前本地评价从 398 张公开真值中建立固定的多标签分层划分：278 张训练、60 张验证、60 张测试。1047 张官方无标签图像仅进入训练池；官方 Validation/Test 因没有公开掩码，不用于本地 mIoU。
 
 ## 研究文档
 
@@ -28,6 +30,7 @@
 - [`outputs/floodnet_handoff_state.md`](outputs/floodnet_handoff_state.md)：当前阶段、最新实验、阻塞项和下一步；
 - [`outputs/floodnet_experiment_registry.csv`](outputs/floodnet_experiment_registry.csv)：不可覆盖的实验注册表；
 - [`outputs/floodnet_decision_log.md`](outputs/floodnet_decision_log.md)：阶段门和研究路线决策记录。
+- [`outputs/floodnet_dataset_audit.md`](outputs/floodnet_dataset_audit.md)：当前挑战版压缩包、公开标签和本地评价协议审计。
 
 ## Codex 跨机器继续方式
 
@@ -39,4 +42,4 @@
 
 ## 当前状态
 
-当前处于 `Pre-Week 1`。下一阶段是审计 FloodNet 本地目录、标签映射、官方划分和类别统计，并建立 SegFormer-B0 100% 监督基线。
+当前处于 `Week 1 / M1`。下一阶段是在本地合并解压七个 ZIP，生成可复现的 278/60/60 划分，完成数据管线、指标单元测试和四图像过拟合测试。GPU 租用只用于通过本地检查后的正式训练。
