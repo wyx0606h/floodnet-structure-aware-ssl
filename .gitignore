@@ -1,0 +1,61 @@
+# Codex and local scratch state
+.codex/
+.agents/
+tmp/
+work/
+
+# Datasets and local mounts
+data/
+datasets/
+dataset/
+FloodNet/
+AIFloodSense/
+UrbanSARFloods/
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# Model artifacts and experiment outputs
+checkpoints/
+weights/
+runs/
+logs/
+wandb/
+tensorboard/
+predictions/
+visualizations/
+artifacts/
+*.ckpt
+*.pth
+*.pt
+*.onnx
+
+# Local configuration and secrets
+.env
+.env.*
+*.local.yaml
+*.local.yml
+*.local.json
+secrets.*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+~$*
