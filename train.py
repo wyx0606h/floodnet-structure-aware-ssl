@@ -213,15 +213,16 @@ def main() -> int:
                 logger.info("New best mIoU %.6f at iteration %d", best_miou, iteration)
         history.append(row)
         append_history_csv(paths["curves"] / "history.csv", history)
-        save_training_checkpoint(
-            paths["checkpoints"] / "last.pth",
-            model=model,
-            optimizer=optimizer,
-            iteration=iteration,
-            best_miou=best_miou,
-            history=history,
-            config=config,
-        )
+        if should_eval or iteration % 500 == 0:
+            save_training_checkpoint(
+                paths["checkpoints"] / "last.pth",
+                model=model,
+                optimizer=optimizer,
+                iteration=iteration,
+                best_miou=best_miou,
+                history=history,
+                config=config,
+            )
         logger.info("iteration=%d train_loss=%.6f best_miou=%.6f", iteration, loss_value, best_miou)
 
     summary = {
