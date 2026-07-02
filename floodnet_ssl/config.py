@@ -68,14 +68,17 @@ def validate_supervised_config(config: Mapping[str, Any]) -> None:
     loss = config.get("loss", {})
     if loss is not None and not isinstance(loss, Mapping):
         raise ConfigError("Config section 'loss' must be a mapping")
+    ssl = config.get("ssl", {})
+    if ssl is not None and not isinstance(ssl, Mapping):
+        raise ConfigError("Config section 'ssl' must be a mapping")
 
     if not str(experiment.get("run_id", "")).strip():
         raise ConfigError("experiment.run_id is required")
     if not str(experiment.get("output_dir", "")).strip():
         raise ConfigError("experiment.output_dir is required")
-    if experiment.get("kind") not in {"supervised_baseline", "overfit4"}:
+    if experiment.get("kind") not in {"supervised_baseline", "semi_supervised", "overfit4"}:
         raise ConfigError(
-            "experiment.kind must be 'supervised_baseline' or 'overfit4'"
+            "experiment.kind must be 'supervised_baseline', 'semi_supervised', or 'overfit4'"
         )
     protocol = str((dataset or {}).get("protocol", "")).strip()
     if protocol and protocol not in {"sup398", "full1445", "ssl398_1047", "overfit4"}:
@@ -84,6 +87,12 @@ def validate_supervised_config(config: Mapping[str, Any]) -> None:
     for key in ("data_root", "manifest"):
         if not str(data.get(key, "")).strip():
             raise ConfigError(f"data.{key} is required")
+    if experiment.get("kind") == "semi_supervised":
+        for key in ("unlabeled_manifest", "unlabeled_id_list"):
+            if not str(data.get(key, "")).strip():
+                raise ConfigError(f"data.{key} is required for semi_supervised runs")
+        if not ssl:
+            raise ConfigError("ssl section is required for semi_supervised runs")
     crop_size = _require_positive_int(data, "crop_size")
     if crop_size != 512:
         raise ConfigError(
