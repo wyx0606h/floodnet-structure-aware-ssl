@@ -68,6 +68,9 @@ def validate_supervised_config(config: Mapping[str, Any]) -> None:
     loss = config.get("loss", {})
     if loss is not None and not isinstance(loss, Mapping):
         raise ConfigError("Config section 'loss' must be a mapping")
+    modules = config.get("modules", {})
+    if modules is not None and not isinstance(modules, Mapping):
+        raise ConfigError("Config section 'modules' must be a mapping")
 
     if not str(experiment.get("run_id", "")).strip():
         raise ConfigError("experiment.run_id is required")
@@ -94,6 +97,13 @@ def validate_supervised_config(config: Mapping[str, Any]) -> None:
         raise ConfigError("Week 1 model.name must be 'segformer_b0'")
     if int(model.get("num_labels", -1)) != 10:
         raise ConfigError("model.num_labels must be 10")
+    boundary_context_model = model.get("boundary_context", {})
+    if boundary_context_model and not isinstance(boundary_context_model, Mapping):
+        raise ConfigError("model.boundary_context must be a mapping")
+    if bool((boundary_context_model or {}).get("enabled", False)):
+        kernel_size = int((boundary_context_model or {}).get("kernel_size", 5))
+        if kernel_size <= 0 or kernel_size % 2 == 0:
+            raise ConfigError("model.boundary_context.kernel_size must be a positive odd integer")
     if model.get("pretrained") and not str(
         model.get("pretrained_model_name_or_path", "")
     ).strip():
@@ -150,3 +160,9 @@ def validate_supervised_config(config: Mapping[str, Any]) -> None:
         loss_name = str(loss.get("name", "ce_dice")).casefold()
         if loss_name not in {"ce", "cross_entropy", "ce_dice", "cross_entropy_dice"}:
             raise ConfigError("loss.name must be cross_entropy or ce_dice")
+    if modules:
+        boundary_context = modules.get("boundary_context", {})
+        if boundary_context and not isinstance(boundary_context, Mapping):
+            raise ConfigError("modules.boundary_context must be a mapping")
+        if bool((boundary_context or {}).get("enabled", False)) and not bool((boundary_context_model or {}).get("enabled", False)):
+            raise ConfigError("modules.boundary_context requires model.boundary_context.enabled")

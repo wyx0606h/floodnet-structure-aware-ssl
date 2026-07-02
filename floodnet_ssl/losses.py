@@ -7,7 +7,9 @@ from typing import Mapping, Any
 import torch
 import torch.nn.functional as F
 
+from .boundary_context import boundary_context_loss
 from .constants import IGNORE_INDEX, NUM_CLASSES
+from .models import SegmentationModelOutput, extract_logits
 
 
 def multiclass_dice_loss(
@@ -63,3 +65,32 @@ def segmentation_loss(
         dice = multiclass_dice_loss(logits, target, ignore_index=ignore_index)
         return ce_weight * ce + dice_weight * dice
     raise ValueError(f"Unsupported loss.name: {name}")
+
+def supervised_objective(
+    output: object,
+    target: torch.Tensor,
+    config: Mapping[str, Any] | None = None,
+    *,
+    ignore_index: int = IGNORE_INDEX,
+) -> torch.Tensor:
+    """Compute semantic loss plus any enabled config-gated auxiliary losses."""
+
+    config = dict(config or {})
+    logits = extract_logits(output)
+    total = segmentation_loss(
+        logits,
+        target,
+        config.get("loss"),
+        ignore_index=ignore_index,
+    )
+    modules = config.get("modules", {})
+    boundary_config = modules.get("boundary_context", {}) if isinstance(modules, Mapping) else {}
+    auxiliary = output.auxiliary if isinstance(output, SegmentationModelOutput) else {}
+    total = total + boundary_context_loss(
+        semantic_logits=logits,
+        auxiliary=auxiliary,
+        target=target,
+        config=boundary_config,
+        ignore_index=ignore_index,
+    )
+    return total

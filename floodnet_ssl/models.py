@@ -8,6 +8,7 @@ from typing import Any, Mapping, Sequence
 
 import torch
 
+from .boundary_context import refine_logits_with_boundary_context
 from .constants import CLASS_NAMES
 
 
@@ -84,6 +85,38 @@ class MultiHeadSegmentationModel(torch.nn.Module):
             name: head(features) for name, head in self.auxiliary_heads.items()
         }
         return SegmentationModelOutput(logits=logits, auxiliary=auxiliary)
+
+class BoundaryContextWrapper(torch.nn.Module):
+    """Attach a boundary head and use it to refine semantic logits."""
+
+    def __init__(
+        self,
+        base_model: torch.nn.Module,
+        *,
+        num_labels: int,
+        strength: float = 0.25,
+        kernel_size: int = 5,
+    ) -> None:
+        super().__init__()
+        self.base_model = base_model
+        self.boundary_head = ConvPredictionHead(num_labels, 1)
+        self.strength = float(strength)
+        self.kernel_size = int(kernel_size)
+
+    def forward(self, image: torch.Tensor) -> SegmentationModelOutput:
+        base_output = self.base_model(image)
+        logits = extract_logits(base_output)
+        boundary_logits = self.boundary_head(logits)
+        refined = refine_logits_with_boundary_context(
+            logits,
+            boundary_logits,
+            strength=self.strength,
+            kernel_size=self.kernel_size,
+        )
+        auxiliary = {"boundary": boundary_logits}
+        if isinstance(base_output, SegmentationModelOutput):
+            auxiliary = {**dict(base_output.auxiliary), **auxiliary}
+        return SegmentationModelOutput(logits=refined, auxiliary=auxiliary)
 def segformer_dependency_status() -> dict[str, bool]:
     return {
         package: importlib.util.find_spec(package) is not None
@@ -147,7 +180,16 @@ def build_model(model_config: Mapping[str, Any]) -> torch.nn.Module:
 
     name = str(model_config.get("name", "segformer_b0"))
     if name == "segformer_b0":
-        return build_segformer_b0(model_config)
+        model = build_segformer_b0(model_config)
+        boundary_context = model_config.get("boundary_context", {})
+        if isinstance(boundary_context, Mapping) and bool(boundary_context.get("enabled", False)):
+            model = BoundaryContextWrapper(
+                model,
+                num_labels=int(model_config.get("num_labels", len(CLASS_NAMES))),
+                strength=float(boundary_context.get("strength", 0.25)),
+                kernel_size=int(boundary_context.get("kernel_size", 5)),
+            )
+        return model
     raise UnsupportedModelError(f"Unsupported model.name: {name}")
 
 
