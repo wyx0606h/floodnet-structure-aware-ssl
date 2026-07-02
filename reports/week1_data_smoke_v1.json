@@ -1,0 +1,90 @@
+{
+  "passed": true,
+  "data_root": "F:\\数据集\\Flood\\FloodNet_Track1_Merged",
+  "manifest": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\splits\\local_278_60_60_v1\\manifest.csv",
+  "crop_size": 512,
+  "batch_size": 2,
+  "seed": 20260625,
+  "python": "3.9.19",
+  "numpy": "1.26.4",
+  "torch": "2.3.0",
+  "splits": {
+    "train": {
+      "dataset_size": 278,
+      "batch_ids": [
+        "10166",
+        "10175"
+      ],
+      "image_shape": [
+        2,
+        3,
+        512,
+        512
+      ],
+      "mask_shape": [
+        2,
+        512,
+        512
+      ],
+      "image_dtype": "torch.float32",
+      "mask_dtype": "torch.int64",
+      "image_min": 0.0,
+      "image_max": 0.8588235378265381,
+      "mask_values": [
+        5,
+        9
+      ]
+    },
+    "validation": {
+      "dataset_size": 60,
+      "batch_ids": [
+        "10165",
+        "10687"
+      ],
+      "image_shape": [
+        2,
+        3,
+        512,
+        512
+      ],
+      "mask_shape": [
+        2,
+        512,
+        512
+      ],
+      "image_dtype": "torch.float32",
+      "mask_dtype": "torch.int64",
+      "image_min": 0.0,
+      "image_max": 0.5647059082984924,
+      "mask_values": [
+        5,
+        9
+      ]
+    },
+    "test": {
+      "dataset_size": 60,
+      "batch_ids": [
+        "6359",
+        "6386"
+      ],
+      "image_shape": [
+        2,
+        3,
+        512,
+        512
+      ],
+      "mask_shape": [
+        2,
+        512,
+        512
+      ],
+      "image_dtype": "torch.float32",
+      "mask_dtype": "torch.int64",
+      "image_min": 0.13725490868091583,
+      "image_max": 0.9960784316062927,
+      "mask_values": [
+        9
+      ]
+    }
+  }
+}

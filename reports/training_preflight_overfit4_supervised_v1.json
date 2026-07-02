@@ -1,0 +1,20 @@
+{
+  "ready": false,
+  "config": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\configs\\overfit4_segformer_b0.yaml",
+  "data_root": "F:\\FloodNet\\FloodNet-Supervised_v1.0",
+  "manifest": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\splits\\overfit4_supervised_v1\\manifest.csv",
+  "manifest_rows": 4,
+  "configured_device": "cpu",
+  "torch_version": "2.3.0",
+  "cuda_available": false,
+  "dependencies": {
+    "transformers": false,
+    "safetensors": false
+  },
+  "pretrained_source": "",
+  "local_model_path_found": null,
+  "blockers": [
+    "missing dependency: transformers"
+  ],
+  "warnings": []
+}

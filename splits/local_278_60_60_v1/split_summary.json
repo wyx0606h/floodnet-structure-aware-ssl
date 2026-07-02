@@ -1,0 +1,244 @@
+{
+  "algorithm": "grouped_multilabel_greedy_swap_v1",
+  "seed": 20260624,
+  "optimization_steps": 10000,
+  "split_sizes": {
+    "train": 278,
+    "validation": 60,
+    "test": 60
+  },
+  "inventory_path": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\reports\\floodnet_track1_audit_v1\\inventory.csv",
+  "inventory_file_sha256": "17c8dd1bf7c48aa8cb650c813738a21efd27ef4a930d836272a6b5b143c72301",
+  "near_duplicate_review_path": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\reports\\floodnet_track1_audit_v1\\near_duplicate_candidates.csv",
+  "near_duplicate_review_sha256": "a6bad3a01e0cbff458db797ae1e740138aee06db1f40d23b1f067776c0ae7661",
+  "group_count": 397,
+  "largest_group_size": 2,
+  "forced_train_sample_ids": [
+    "7081",
+    "7083"
+  ],
+  "stratification_feature_names": [
+    "scene:Flooded",
+    "scene:Non-Flooded",
+    "present:0:Background",
+    "fraction_tertile:0:Background:1",
+    "fraction_tertile:0:Background:2",
+    "fraction_tertile:0:Background:3",
+    "present:1:Building-flooded",
+    "fraction_tertile:1:Building-flooded:1",
+    "fraction_tertile:1:Building-flooded:2",
+    "fraction_tertile:1:Building-flooded:3",
+    "present:2:Building-non-flooded",
+    "fraction_tertile:2:Building-non-flooded:1",
+    "fraction_tertile:2:Building-non-flooded:2",
+    "fraction_tertile:2:Building-non-flooded:3",
+    "present:3:Road-flooded",
+    "fraction_tertile:3:Road-flooded:1",
+    "fraction_tertile:3:Road-flooded:2",
+    "fraction_tertile:3:Road-flooded:3",
+    "present:4:Road-non-flooded",
+    "fraction_tertile:4:Road-non-flooded:1",
+    "fraction_tertile:4:Road-non-flooded:2",
+    "fraction_tertile:4:Road-non-flooded:3",
+    "present:5:Water",
+    "fraction_tertile:5:Water:1",
+    "fraction_tertile:5:Water:2",
+    "fraction_tertile:5:Water:3",
+    "present:6:Tree",
+    "fraction_tertile:6:Tree:1",
+    "fraction_tertile:6:Tree:2",
+    "fraction_tertile:6:Tree:3",
+    "present:7:Vehicle",
+    "fraction_tertile:7:Vehicle:1",
+    "fraction_tertile:7:Vehicle:2",
+    "fraction_tertile:7:Vehicle:3",
+    "present:8:Pool",
+    "fraction_tertile:8:Pool:1",
+    "fraction_tertile:8:Pool:2",
+    "fraction_tertile:8:Pool:3",
+    "present:9:Grass",
+    "fraction_tertile:9:Grass:1",
+    "fraction_tertile:9:Grass:2",
+    "fraction_tertile:9:Grass:3"
+  ],
+  "objective": 0.05105268006446264,
+  "distribution": {
+    "train": {
+      "count": 278,
+      "scene_counts": {
+        "Flooded": 35,
+        "Non-Flooded": 243
+      },
+      "classes": {
+        "0": {
+          "name": "Background",
+          "image_count": 21,
+          "pixel_fraction_mean": 0.014944472122302158
+        },
+        "1": {
+          "name": "Building-flooded",
+          "image_count": 24,
+          "pixel_fraction_mean": 0.01579174340527578
+        },
+        "2": {
+          "name": "Building-non-flooded",
+          "image_count": 100,
+          "pixel_fraction_mean": 0.030844150779376498
+        },
+        "3": {
+          "name": "Road-flooded",
+          "image_count": 25,
+          "pixel_fraction_mean": 0.017965823741007192
+        },
+        "4": {
+          "name": "Road-non-flooded",
+          "image_count": 135,
+          "pixel_fraction_mean": 0.053031817745803365
+        },
+        "5": {
+          "name": "Water",
+          "image_count": 131,
+          "pixel_fraction_mean": 0.12479253357314148
+        },
+        "6": {
+          "name": "Tree",
+          "image_count": 217,
+          "pixel_fraction_mean": 0.16560727637889686
+        },
+        "7": {
+          "name": "Vehicle",
+          "image_count": 89,
+          "pixel_fraction_mean": 0.0018348030575539567
+        },
+        "8": {
+          "name": "Pool",
+          "image_count": 62,
+          "pixel_fraction_mean": 0.002024978417266187
+        },
+        "9": {
+          "name": "Grass",
+          "image_count": 257,
+          "pixel_fraction_mean": 0.5731624007793765
+        }
+      }
+    },
+    "validation": {
+      "count": 60,
+      "scene_counts": {
+        "Flooded": 8,
+        "Non-Flooded": 52
+      },
+      "classes": {
+        "0": {
+          "name": "Background",
+          "image_count": 4,
+          "pixel_fraction_mean": 0.009408508333333334
+        },
+        "1": {
+          "name": "Building-flooded",
+          "image_count": 6,
+          "pixel_fraction_mean": 0.016289513888888888
+        },
+        "2": {
+          "name": "Building-non-flooded",
+          "image_count": 21,
+          "pixel_fraction_mean": 0.025680330555555558
+        },
+        "3": {
+          "name": "Road-flooded",
+          "image_count": 6,
+          "pixel_fraction_mean": 0.02294767916666667
+        },
+        "4": {
+          "name": "Road-non-flooded",
+          "image_count": 29,
+          "pixel_fraction_mean": 0.04713351111111111
+        },
+        "5": {
+          "name": "Water",
+          "image_count": 28,
+          "pixel_fraction_mean": 0.12095812916666665
+        },
+        "6": {
+          "name": "Tree",
+          "image_count": 47,
+          "pixel_fraction_mean": 0.15934267777777775
+        },
+        "7": {
+          "name": "Vehicle",
+          "image_count": 19,
+          "pixel_fraction_mean": 0.0020121402777777777
+        },
+        "8": {
+          "name": "Pool",
+          "image_count": 13,
+          "pixel_fraction_mean": 0.0018261541666666666
+        },
+        "9": {
+          "name": "Grass",
+          "image_count": 56,
+          "pixel_fraction_mean": 0.5944013555555557
+        }
+      }
+    },
+    "test": {
+      "count": 60,
+      "scene_counts": {
+        "Non-Flooded": 52,
+        "Flooded": 8
+      },
+      "classes": {
+        "0": {
+          "name": "Background",
+          "image_count": 4,
+          "pixel_fraction_mean": 0.009709480555555556
+        },
+        "1": {
+          "name": "Building-flooded",
+          "image_count": 6,
+          "pixel_fraction_mean": 0.016822526388888887
+        },
+        "2": {
+          "name": "Building-non-flooded",
+          "image_count": 21,
+          "pixel_fraction_mean": 0.02902094861111111
+        },
+        "3": {
+          "name": "Road-flooded",
+          "image_count": 6,
+          "pixel_fraction_mean": 0.02001088888888889
+        },
+        "4": {
+          "name": "Road-non-flooded",
+          "image_count": 30,
+          "pixel_fraction_mean": 0.055647565277777776
+        },
+        "5": {
+          "name": "Water",
+          "image_count": 28,
+          "pixel_fraction_mean": 0.12055493333333334
+        },
+        "6": {
+          "name": "Tree",
+          "image_count": 47,
+          "pixel_fraction_mean": 0.17112257777777778
+        },
+        "7": {
+          "name": "Vehicle",
+          "image_count": 18,
+          "pixel_fraction_mean": 0.0015759180555555558
+        },
+        "8": {
+          "name": "Pool",
+          "image_count": 13,
+          "pixel_fraction_mean": 0.001566452777777778
+        },
+        "9": {
+          "name": "Grass",
+          "image_count": 55,
+          "pixel_fraction_mean": 0.5739687083333335
+        }
+      }
+    }
+  }
+}

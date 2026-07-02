@@ -1,0 +1,28 @@
+{
+  "supervised_root": "F:\\FloodNet\\FloodNet-Supervised_v1.0",
+  "challenge_root": "F:\\数据集\\Flood\\FloodNet_Track1_Merged\\FloodNet Challenge @ EARTHVISION 2021 - Track 1",
+  "output_dir": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\splits",
+  "counts": {
+    "challenge_labeled": 398,
+    "challenge_unlabeled": 1047,
+    "full_train": 1445,
+    "validation": 450,
+    "test": 448
+  },
+  "manifests": {
+    "sup398": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\splits\\sup398_manifest.csv",
+    "full1445": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\splits\\full1445_manifest.csv"
+  },
+  "txt_lists": {
+    "challenge_labeled": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\splits\\challenge_labeled_398.txt",
+    "challenge_unlabeled": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\splits\\challenge_unlabeled_1047.txt",
+    "full_train": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\splits\\full_train_1445.txt",
+    "validation": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\splits\\val_450.txt",
+    "test": "E:\\CodexProjects\\floodnet-structure-aware-ssl\\splits\\test_448.txt"
+  },
+  "checks": {
+    "labeled_unlabeled_disjoint": true,
+    "challenge_union_equals_full_train": true,
+    "all_supervised_masks_present": true
+  }
+}

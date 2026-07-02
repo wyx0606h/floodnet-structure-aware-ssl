@@ -1,45 +1,204 @@
-# FloodNet Structure-Aware Semi-Supervised Segmentation
+# FloodNet SegFormer-B0 Supervised Baselines
 
-面向少标注洪灾无人机影像的结构感知半监督语义分割研究。
+本仓库用于 FloodNet 洪灾无人机影像十类语义分割实验。当前阶段先建立统一、可复现的监督基线，比较两种训练标签规模：
 
-## 当前研究主线
+- `sup398`：使用 Challenge 官方 398 张 labeled train 图像；
+- `full1445`：使用完整监督版 1445 张 train 图像；
 
-第一阶段实验**仅以 FloodNet 为核心数据集**，验证以下问题：
+两组实验除训练标签数量和实验名外，保持模型、预训练权重、损失、优化器、增强、crop size、batch size、`max_iterations`、Validation/Test、指标、滑窗推理方式和 seed 一致。后续 `ssl398_1047` 会在同一协议结构上加入 1047 张 unlabeled、EMA teacher 和伪标签，本轮不实现完整半监督训练。
 
-1. 将物体身份与洪水状态进行层次分解，能否改善受淹建筑和受淹道路；
-2. 边界监督能否改善建筑、道路轮廓；
-3. 物体内部与边界外部上下文能否改善受淹状态判断；
-4. 层次、边界与关系一致性能否比单纯置信度更可靠地筛选伪标签。
+## 环境安装
 
-默认骨干为 SegFormer-B0，使用 PyTorch，在单卡约 24 GB 显存条件下开展实验。
+建议在服务器上创建独立环境并安装 PyTorch、Transformers 等依赖。示例：
 
-## 数据集范围
+```bash
+pip install torch torchvision transformers safetensors pyyaml pillow numpy
+```
 
-- **FloodNet Challenge Track 1**：当前主数据版本。七个 ZIP 合计包含 398 张有掩码训练图像、1047 张无标签训练图像、450 张无公开掩码验证图像和 448 张无公开掩码测试图像；
-- **AIFloodSense**：仅在 FloodNet 核心方法通过阶段门后，用于外部预训练或跨地区泛化验证；
-- **UrbanSARFloods**：本轮不进入主实验，保留为未来跨模态研究方向。
+本地开发可先运行不建模型的 dry-run 或单元测试；真实 SegFormer-B0 训练需要 `transformers`。
 
-数据集、模型权重和训练输出不提交到 Git 仓库。
+## 数据路径配置
 
-当前本地评价从 398 张公开真值中建立固定的多标签分层划分：278 张训练、60 张验证、60 张测试。1047 张官方无标签图像仅进入训练池；官方 Validation/Test 因没有公开掩码，不用于本地 mIoU。
+仓库不硬编码本地盘符。训练只需要完整监督版数据根；只有重新生成 split 时才需要 Challenge 数据根：
 
-## 研究文档
+```bash
+export SUPERVISED_ROOT=/path/to/FloodNet/FloodNet-Supervised_v1.0
+export CHALLENGE_ROOT=/path/to/FloodNet-Challenge-Track1
+```
 
-- [`outputs/floodnet_idea_experiment_spec.md`](outputs/floodnet_idea_experiment_spec.md)：研究问题、方法、公式、实验协议、指标、消融和论文故事；
-- [`outputs/floodnet_codex_8week_execution_plan.md`](outputs/floodnet_codex_8week_execution_plan.md)：2026年6月25日至8月19日的八周执行计划；
-- [`outputs/floodnet_handoff_state.md`](outputs/floodnet_handoff_state.md)：当前阶段、最新实验、阻塞项和下一步；
-- [`outputs/floodnet_experiment_registry.csv`](outputs/floodnet_experiment_registry.csv)：不可覆盖的实验注册表；
-- [`outputs/floodnet_decision_log.md`](outputs/floodnet_decision_log.md)：阶段门和研究路线决策记录。
-- [`outputs/floodnet_dataset_audit.md`](outputs/floodnet_dataset_audit.md)：当前挑战版压缩包、公开标签和本地评价协议审计。
+Windows PowerShell 示例：
 
-## Codex 跨机器继续方式
+```powershell
+$env:SUPERVISED_ROOT='D:\data\FloodNet\FloodNet-Supervised_v1.0'
+$env:CHALLENGE_ROOT='D:\data\FloodNetChallenge\FloodNet Challenge @ EARTHVISION 2021 - Track 1'
+```
 
-在新电脑、VS Code Remote SSH 或租用 GPU 服务器中打开本仓库后，向 Codex 输入：
+`SUPERVISED_ROOT` 可以指向 `FloodNet-Supervised_v1.0` 或其父目录。若仓库已包含 `splits/`，服务器训练不需要上传 Challenge 版；`CHALLENGE_ROOT` 只在重新运行 `tools/build_floodnet_splits.py` 时需要。
 
-> 请先读取 AGENTS.md，然后依次读取 outputs/floodnet_handoff_state.md、outputs/floodnet_decision_log.md、outputs/floodnet_codex_8week_execution_plan.md 和 outputs/floodnet_idea_experiment_spec.md，从当前交接状态继续执行。每次会话结束前更新交接状态、实验注册表和决策日志。
 
-仓库文件是跨机器研究连续性的事实来源，不依赖聊天记忆。
+## 预训练权重
 
-## 当前状态
+当前配置使用 HuggingFace 模型名 `nvidia/mit-b0`，并设置 `local_files_only: false`。因此服务器联网时，第一次运行 smoke test 或正式训练会自动下载 SegFormer-B0 ImageNet 预训练权重到 HuggingFace 缓存。建议把缓存放在仓库外，避免误提交：
 
-当前处于 `Week 1 / M1`。下一阶段是在本地合并解压七个 ZIP，生成可复现的 278/60/60 划分，完成数据管线、指标单元测试和四图像过拟合测试。GPU 租用只用于通过本地检查后的正式训练。
+```bash
+export HF_HOME=/data/cache/huggingface
+export TRANSFORMERS_CACHE=/data/cache/huggingface/transformers
+```
+
+也可以在训练前手动预拉取一次：
+
+```bash
+python - <<'PY'
+from transformers import SegformerForSemanticSegmentation
+
+SegformerForSemanticSegmentation.from_pretrained(
+    "nvidia/mit-b0",
+    num_labels=10,
+    ignore_mismatched_sizes=True,
+)
+PY
+```
+
+如果服务器离线，请先在有网络的机器下载到本地目录，例如 `weights/nvidia_mit-b0/`，再手动上传到服务器，并把本地运行用配置中的：
+
+```yaml
+model:
+  pretrained_model_name_or_path: weights/nvidia_mit-b0
+  local_files_only: true
+```
+
+权重、checkpoint、缓存和训练输出不要提交到 Git。本仓库已在 `.gitignore` 中忽略 `weights/`、`*.bin`、`*.safetensors`、`*.pth`、`checkpoints/` 和 `outputs/*/` 等模型产物。
+
+## 当前关键训练配置
+
+两组监督实验统一使用：SegFormer-B0、`nvidia/mit-b0` ImageNet 预训练、CE+Dice、AdamW、poly schedule、1000 steps warmup、gradient clip 1.0、512 crop、AMP、滑窗推理 tile 512 / stride 384。第一版基础基线关闭类别感知裁剪，`drop_last: true` 保证有效 batch size 稳定为 8。
+
+## 生成 split
+
+先由两套数据生成固定名单和 manifest：
+
+```bash
+python tools/build_floodnet_splits.py \
+  --supervised-root "$SUPERVISED_ROOT" \
+  --challenge-root "$CHALLENGE_ROOT" \
+  --output-dir splits
+```
+
+输出包括：
+
+```text
+splits/challenge_labeled_398.txt
+splits/challenge_unlabeled_1047.txt
+splits/full_train_1445.txt
+splits/val_450.txt
+splits/test_448.txt
+splits/sup398_manifest.csv
+splits/full1445_manifest.csv
+```
+
+脚本会检查 398/1047/1445/450/448 数量、labeled/unlabeled 无交集、二者并集等于完整 train、图像和 mask 存在。
+> 若你没有上传 `splits/`，才需要先上传 Challenge 版并运行 split 生成命令；若 `splits/` 已随仓库上传，可直接跳过 split 生成。
+
+
+## 训练命令
+
+正式配置使用 40000 optimizer steps、每 2000 steps 做一次 validation；`max_iterations` 按 optimizer step 计数，不按 micro-batch 计数。有效 batch size 为 `batch_size 2 × gradient_accumulation_steps 4 = 8`。
+
+服务器上先做 50–100 steps GPU smoke test。建议把输出写到临时目录，确认 forward/backward、loss、checkpoint、validation 都正常：
+
+```bash
+python train.py \
+  --config configs/segformer_b0_sup398.yaml \
+  --supervised-root "$SUPERVISED_ROOT" \
+  --output-dir outputs/smoke_sup398 \
+  --max-iterations 50 \
+  --val-interval 50 \
+  --max-eval-samples 8
+
+python train.py \
+  --config configs/segformer_b0_full1445.yaml \
+  --supervised-root "$SUPERVISED_ROOT" \
+  --output-dir outputs/smoke_full1445 \
+  --max-iterations 50 \
+  --val-interval 50 \
+  --max-eval-samples 8
+```
+
+Smoke 通过后运行正式训练。
+
+`sup398`：
+
+```bash
+python train.py \
+  --config configs/segformer_b0_sup398.yaml \
+  --supervised-root "$SUPERVISED_ROOT"
+```
+
+`full1445`：
+
+```bash
+python train.py \
+  --config configs/segformer_b0_full1445.yaml \
+  --supervised-root "$SUPERVISED_ROOT"
+```
+
+断点续训：
+
+```bash
+python train.py \
+  --config configs/segformer_b0_sup398.yaml \
+  --supervised-root "$SUPERVISED_ROOT" \
+  --resume outputs/segformer_b0_sup398/checkpoints/last.pth
+```
+
+## Validation/Test 评估
+
+Validation 用于选择 `best_miou.pth`，Test 只用于配置冻结后的最终评价。
+
+```bash
+python evaluate.py \
+  --config configs/segformer_b0_sup398.yaml \
+  --supervised-root "$SUPERVISED_ROOT" \
+  --checkpoint outputs/segformer_b0_sup398/checkpoints/best_miou.pth \
+  --split validation
+
+python evaluate.py \
+  --config configs/segformer_b0_sup398.yaml \
+  --supervised-root "$SUPERVISED_ROOT" \
+  --checkpoint outputs/segformer_b0_sup398/checkpoints/best_miou.pth \
+  --split test
+```
+
+`full1445` 只需替换配置和 checkpoint 路径。
+
+## 输出目录
+
+每个实验保存到：
+
+```text
+outputs/<experiment_name>/
+├── config_resolved.yaml
+├── train.log
+├── checkpoints/
+│   ├── best_miou.pth
+│   └── last.pth
+├── metrics/
+├── curves/
+└── predictions/
+```
+
+指标包括 confusion matrix、Pixel Accuracy、每类 IoU、mIoU、每类 Precision/Recall/F1、macro-F1 和 Flooded-mIoU。
+
+## 主要入口
+
+```text
+train.py
+evaluate.py
+tools/build_floodnet_splits.py
+configs/
+floodnet_ssl/
+docs/
+tests/
+```
+
+旧 `scripts/` 目录保留为审计、服务器检查和历史兼容工具；新训练/评估优先使用顶层统一入口。

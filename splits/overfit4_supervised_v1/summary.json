@@ -1,0 +1,22 @@
+{
+  "samples": [
+    "7364",
+    "9040",
+    "9365",
+    "9351"
+  ],
+  "union_crop_class_ids": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "covers_all_10_classes": true,
+  "manifest_sha256": "79e982b173f6d5cba3baced5478b8c90bdc63adf8029b789faa0d62b2af4c25e"
+}

@@ -1,0 +1,5 @@
+sample_id,split,scene_label,image_path,mask_path,target_class_ids,crop_top,crop_left,crop_height,crop_width,crop_class_ids,selection_reason
+7364,train,,train/train-org-img/7364.jpg,train/train-label-img/7364_lab.png,1;3,0,568,512,512,1;2;3;5;6;7;8,carried_forward_fixed_crop_all_class_coverage_supervised_v1
+9040,train,,train/train-org-img/9040.jpg,train/train-label-img/9040_lab.png,,2424,2888,512,512,0;2;4;6;7;9,carried_forward_fixed_crop_all_class_coverage_supervised_v1
+9365,train,,train/train-org-img/9365.jpg,train/train-label-img/9365_lab.png,,600,1400,512,512,2;4;5;6;7;9,carried_forward_fixed_crop_all_class_coverage_supervised_v1
+9351,train,,train/train-org-img/9351.jpg,train/train-label-img/9351_lab.png,,248,872,512,512,2;4;5;6;7;8,carried_forward_fixed_crop_all_class_coverage_supervised_v1

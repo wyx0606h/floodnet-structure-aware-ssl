@@ -1,0 +1,15 @@
+{
+  "data_root": "F:\\FloodNet\\FloodNet-Supervised_v1.0",
+  "splits": {
+    "train": {
+      "samples": 1445
+    },
+    "validation": {
+      "samples": 450
+    },
+    "test": {
+      "samples": 448
+    }
+  },
+  "total_samples": 2343
+}

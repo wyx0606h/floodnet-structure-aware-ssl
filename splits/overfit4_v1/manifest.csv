@@ -1,0 +1,5 @@
+sample_id,split,scene_label,image_path,mask_path,target_class_ids,crop_top,crop_left,crop_height,crop_width,crop_class_ids,selection_reason
+7364,train,Flooded,Train/Labeled/Flooded/image/7364.jpg,Train/Labeled/Flooded/mask/7364_lab.png,1;3,0,568,512,512,1;2;3;5;6;7;8,greedy_fixed_crop_all_class_coverage_with_affected_priority
+9040,train,Non-Flooded,Train/Labeled/Non-Flooded/image/9040.jpg,Train/Labeled/Non-Flooded/mask/9040_lab.png,,2424,2888,512,512,0;2;4;6;7;9,greedy_fixed_crop_all_class_coverage_with_affected_priority
+9365,train,Non-Flooded,Train/Labeled/Non-Flooded/image/9365.jpg,Train/Labeled/Non-Flooded/mask/9365_lab.png,,600,1400,512,512,2;4;5;6;7;9,greedy_fixed_crop_all_class_coverage_with_affected_priority
+9351,train,Non-Flooded,Train/Labeled/Non-Flooded/image/9351.jpg,Train/Labeled/Non-Flooded/mask/9351_lab.png,,248,872,512,512,2;4;5;6;7;8,greedy_fixed_crop_all_class_coverage_with_affected_priority

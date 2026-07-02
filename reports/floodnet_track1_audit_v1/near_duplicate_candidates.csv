@@ -1,0 +1,4 @@
+sample_id_a,sample_id_b,hamming_distance_128,scene_label_a,scene_label_b,official_split_a,official_split_b,image_path_a,image_path_b,decision,review_notes
+7049,7050,5,Non-Flooded,Non-Flooded,Train/Labeled,Train/Labeled,Train/Labeled/Non-Flooded/image/7049.jpg,Train/Labeled/Non-Flooded/image/7050.jpg,same_scene,Consecutive near-identical aerial frames; keep in one local subset.
+7081,7082,3,Non-Flooded,,Train/Labeled,Train/Unlabeled,Train/Labeled/Non-Flooded/image/7081.jpg,Train/Unlabeled/image/7082.jpg,same_scene,Overlapping consecutive frames; force labeled frame into Local Train because 7082 is in the official unlabeled training pool.
+7083,7082,6,Non-Flooded,,Train/Labeled,Train/Unlabeled,Train/Labeled/Non-Flooded/image/7083.jpg,Train/Unlabeled/image/7082.jpg,same_scene,Overlapping consecutive frames; force labeled frame into Local Train because 7082 is in the official unlabeled training pool.

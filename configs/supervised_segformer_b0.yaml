@@ -1,0 +1,43 @@
+experiment:
+  run_id: 20260702_supervised_100_s20260702_segformer_b0
+  output_dir: runs/20260702_supervised_100_s20260702_segformer_b0
+  seed: 20260702
+  kind: supervised_baseline
+
+data:
+  data_root: ${FLOODNET_DATA_ROOT}
+  manifest: splits/floodnet_supervised_v1/manifest.csv
+  train_split: train
+  validation_split: validation
+  crop_size: 512
+  num_workers: 0
+  image_mean: [0.485, 0.456, 0.406]
+  image_std: [0.229, 0.224, 0.225]
+  class_aware_ids: [1, 3]
+  class_aware_probability: 0.5
+
+model:
+  name: segformer_b0
+  num_labels: 10
+  pretrained: true
+  pretrained_model_name_or_path: nvidia/mit-b0
+  local_files_only: true
+
+training:
+  epochs: 80
+  batch_size: 2
+  gradient_accumulation_steps: 4
+  optimizer: adamw
+  learning_rate: 0.00006
+  weight_decay: 0.01
+  use_amp: true
+  device: cuda
+
+evaluation:
+  tile_size: 512
+  stride: 384
+  tile_batch_size: 4
+
+overfit_gate:
+  maximum_final_to_initial_loss_ratio: 0.20
+  minimum_train_miou10: 0.90

@@ -1,0 +1,96 @@
+{
+  "sample_ids": [
+    "7364",
+    "9040",
+    "9365",
+    "9351"
+  ],
+  "crops": [
+    {
+      "sample_id": "7364",
+      "top": 0,
+      "left": 568,
+      "height": 512,
+      "width": 512,
+      "class_ids": [
+        1,
+        2,
+        3,
+        5,
+        6,
+        7,
+        8
+      ]
+    },
+    {
+      "sample_id": "9040",
+      "top": 2424,
+      "left": 2888,
+      "height": 512,
+      "width": 512,
+      "class_ids": [
+        0,
+        2,
+        4,
+        6,
+        7,
+        9
+      ]
+    },
+    {
+      "sample_id": "9365",
+      "top": 600,
+      "left": 1400,
+      "height": 512,
+      "width": 512,
+      "class_ids": [
+        2,
+        4,
+        5,
+        6,
+        7,
+        9
+      ]
+    },
+    {
+      "sample_id": "9351",
+      "top": 248,
+      "left": 872,
+      "height": 512,
+      "width": 512,
+      "class_ids": [
+        2,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    }
+  ],
+  "covered_class_ids": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "covered_class_names": [
+    "Background",
+    "Building-flooded",
+    "Building-non-flooded",
+    "Road-flooded",
+    "Road-non-flooded",
+    "Water",
+    "Tree",
+    "Vehicle",
+    "Pool",
+    "Grass"
+  ],
+  "selection_algorithm": "greedy_fixed_crop_all_class_coverage_with_affected_priority_v1"
+}

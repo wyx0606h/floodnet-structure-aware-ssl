@@ -1,0 +1,44 @@
+experiment:
+  run_id: 20260702_overfit4_100_s20260702_segformer_b0
+  output_dir: runs/20260702_overfit4_100_s20260702_segformer_b0
+  seed: 20260702
+  kind: overfit4
+
+data:
+  data_root: ${FLOODNET_DATA_ROOT}
+  manifest: splits/overfit4_supervised_v1/manifest.csv
+  train_split: train
+  validation_split: train
+  crop_size: 512
+  num_workers: 0
+  image_mean: [0.485, 0.456, 0.406]
+  image_std: [0.229, 0.224, 0.225]
+  class_aware_ids: [1, 3]
+  class_aware_probability: 1.0
+  deterministic_overfit_crop: true
+
+model:
+  name: segformer_b0
+  num_labels: 10
+  pretrained: false
+  pretrained_model_name_or_path: ""
+  local_files_only: true
+
+training:
+  epochs: 200
+  batch_size: 1
+  gradient_accumulation_steps: 1
+  optimizer: adamw
+  learning_rate: 0.0001
+  weight_decay: 0.0
+  use_amp: false
+  device: cpu
+
+evaluation:
+  tile_size: 512
+  stride: 512
+  tile_batch_size: 1
+
+overfit_gate:
+  maximum_final_to_initial_loss_ratio: 0.20
+  minimum_train_miou10: 0.90

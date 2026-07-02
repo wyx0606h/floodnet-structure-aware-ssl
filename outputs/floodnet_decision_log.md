@@ -28,6 +28,15 @@
 | D020 | 2026-06-24 | Active | 先在本地完成代码、单元测试和四图像过拟合，再租用 GPU | 降低付费排查数据或实现错误的成本 | 本地门未通过不得启动正式长训练 |
 | D021 | 2026-06-24 | Active | SegFormer-B0 用于前期核心假设验证，第二骨干延后 | 当前重点是验证结构伪标签而非追逐最新骨干 | 仅在 M6 通过后增加更新或不同架构骨干 |
 | D022 | 2026-06-24 | Active | 本地规范项目根目录为 `E:\CodexProjects\floodnet-structure-aware-ssl` | 与现有 `explore_world` 一样放在 E 盘，并让 Codex App 以保存项目方式管理 | 后续代码、配置和状态文件均在该项目中提交 |
+| D023 | 2026-06-24 | Active | Track 1 合并工具只接受同一批次且编号完整的 `001`–`007` 七个 ZIP，并默认仅做 dry-run | `F:\数据集\Flood` 同时存在 Track 2 ZIP；宽泛匹配会污染 Track 1 数据根目录 | 实际解压前必须核对七包、内部路径、重复路径、展开体积和目标目录确认令牌 |
+| D024 | 2026-06-24 | Active | 固定 278/60/60 划分使用确定性的分组多标签分层 | 同时保持 Flooded/Non-Flooded 场景、十类出现情况和非零像素占比分布，并防止确认的重复或连续场景跨集合 | 分层特征、随机种子、输入清单哈希和重复组必须写入 split 元数据；近重复候选需审查后才冻结 v1 |
+| D025 | 2026-06-25 | Active | 语义 mask 的 4000×3000 网格作为有标签样本的真值坐标系；59 张 4592×3072 RGB 在加载时双线性缩放到 mask 尺寸，mask 不做预先重采样 | 真实挑战包中 339 对同为 4000×3000，59 对为 JPG 4592×3072、mask 4000×3000；直接缩放 RGB 后的边界可视化与标注对齐，而缩放离散 mask 会引入不必要标签误差 | 审计记录原始尺寸和缩放标志；空间增强中图像使用连续插值、mask 始终使用最近邻 |
+| D026 | 2026-06-25 | Active | Week 1 监督管线采用同步几何增强：RGB 双线性、mask 最近邻；默认 512×512 crop，普通随机裁剪与关键受灾类（ID 1、3）感知裁剪各占 50%；整图评价使用重叠滑窗的 softmax 概率平均 | 满足既定 512×512 单卡协议，保护离散标签，并提高受淹建筑/道路进入 crop 的机会；概率融合比硬标签投票保留更多边界信息 | 增强对齐、类别感知命中、边缘覆盖、滑窗无缝融合和重复推理确定性必须通过单元测试；若真实采样覆盖失衡再记录调整 |
+| D027 | 2026-06-25 | Active | 四图像过拟合门使用固定 Local Train 四图 manifest、确定性 512×512 crop、随机初始化 SegFormer-B0、监督交叉熵和独立输出目录；在本地 CPU 运行，通过条件为最终 loss 不高于初始 loss 的 20%，且训练 mIoU-10 不低于 0.90 | 在租用 GPU 和下载预训练权重前验证数据、标签、模型输出、反向传播、优化器、checkpoint 和指标闭环；固定样本和阈值避免主观判断 | 运行前必须安装 `transformers` 并获得用户训练许可；未达到门槛必须登记失败并修复，不得降低阈值掩盖问题 |
+| D028 | 2026-06-25 | Active | canonical 四图门的四个固定 512×512 crop 本身必须联合覆盖 0–9 十类，而不仅是四张完整图联合覆盖；采用 manifest 中的显式 crop 坐标 | 初版图像级选择在实际裁剪后只覆盖六类，不能完整验证十类输出与损失通道；显式坐标同时保证跨运行完全一致 | canonical crop 为 `7364/9040/9365/9351`，实际联合覆盖十类；任何替换必须生成新版本 manifest 并记录 |
+| D029 | 2026-06-27 | Active | Week 1 仅实现网络骨架、统一模型输出和可扩展多头接口，不提前实现真实层次损失、边界损失、关系模块或伪标签筛选 | 当前阶段门仍是四图过拟合与监督 baseline；先稳定服务器训练所需的模型 factory 和输出契约，避免方法模块走在监督/半监督证据之前 | 辅助头默认禁用；真实 object/state、boundary、relation 模块分别按 Week 3/4/5 gate 和新决策追加后再启用 |
+| D030 | 2026-06-27 | Active | Week 1 服务器准备补齐独立 checkpoint 评估、run 汇总和只读服务器环境检查脚本，并增强训练脚本的运行元数据记录 | 到服务器后需要训练、评估、汇总、登记的最短闭环，避免手工翻日志或临时拼命令；这些脚本不改变数据协议、不启动半监督模块 | 新脚本默认不训练、不安装依赖；评估只使用本地 278/60/60 manifest 中有公开 mask 的 split；官方 Validation/Test 仍不得作为本地 GT |
+| D031 | 2026-07-02 | Active | 主数据协议升级为 `F:\FloodNet\FloodNet-Supervised_v1.0` 的官方 supervised split：Train 1445、Validation 450、Test 448 均有分割 mask；旧 398-mask challenge release 与 278/60/60 split 仅保留为历史审计产物 | 用户提供了更完整的 FloodNet supervised 数据；只读审计确认 train/val/test 图像与 mask 一一配对、无跨 split ID 重叠，且 Validation/Test 有公开 mask，可直接用于本地定量评估 | 所有主训练/评估配置改用 `splits/floodnet_supervised_v1/manifest.csv`；少标注实验以 1445 张 official train 为母集隐藏标签；不得把旧 278/60/60 结果与新协议直接横向比较 |
 
 ## 新决定模板
 
@@ -43,3 +52,5 @@
 - 需要新增或重跑的实验：
 - 何时复审：
 ```
+| D032 | 2026-07-02 | Active | 新增统一监督协议 `sup398` 与 `full1445`，并通过 `train.py`、`evaluate.py` 和 `tools/build_floodnet_splits.py` 统一入口执行；两组监督实验除训练标签数量外保持模型、预训练权重、损失、优化器、增强、crop、batch、max_iterations、val/test、指标、推理方式和 seed 一致 | 需要公平比较 Challenge 官方 398 标签训练与完整 1445 标签训练的差异，同时为后续 `ssl398_1047` 预留无标签池、EMA teacher 和伪标签结构 | 本轮只实现监督入口、split 构建、CE+Dice、max_iterations、统一评估和文档；不得实现完整半监督训练；Challenge 398 名单必须从 Challenge 版数据读取，不得随机生成 |
+| D033 | 2026-07-02 | Active | `sup398` 与 `full1445` 统一采用 SegFormer-B0、ImageNet 预训练、CE+Dice、AdamW、poly scheduler、1000-step warmup、gradient clip 1.0、512 crop、有效 batch size 8、40000 optimizer steps、每 2000 steps validation；第一版关闭类别感知裁剪并允许服务器下载 `nvidia/mit-b0` | 保证两组监督实验除训练标签数量外尽可能一致；避免 pilot 实验和类别感知采样引入额外变量；适配 FloodNet 高分辨率与 RTX 4090 训练环境 | `max_iterations` 必须按 optimizer step 统计；若 40000 steps 末期两组都仍明显上升，只能统一延长；Test 只在配置冻结后评估 |

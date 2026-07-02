@@ -1,0 +1,54 @@
+{
+  "passed": true,
+  "track1_root": "F:\\数据集\\Flood\\FloodNet_Track1_Merged\\FloodNet Challenge @ EARTHVISION 2021 - Track 1",
+  "actual_counts": {
+    "labeled_flooded": 51,
+    "labeled_non_flooded": 347,
+    "unlabeled": 1047,
+    "validation": 450,
+    "test": 448
+  },
+  "expected_counts": {
+    "labeled_flooded": 51,
+    "labeled_non_flooded": 347,
+    "unlabeled": 1047,
+    "validation": 450,
+    "test": 448
+  },
+  "class_mapping": {
+    "0": "Background",
+    "1": "Building-flooded",
+    "2": "Building-non-flooded",
+    "3": "Road-flooded",
+    "4": "Road-non-flooded",
+    "5": "Water",
+    "6": "Tree",
+    "7": "Vehicle",
+    "8": "Pool",
+    "9": "Grass"
+  },
+  "image_modes": {
+    "RGB": 2343
+  },
+  "mask_modes": {
+    "L": 398
+  },
+  "image_dimensions": {
+    "4000x3000": 1991,
+    "4592x3072": 352
+  },
+  "labeled_image_mask_dimension_pairs": {
+    "4000x3000->4000x3000": 339,
+    "4592x3072->4000x3000": 59
+  },
+  "labeled_images_requiring_resize": 59,
+  "exact_duplicate_group_count": 0,
+  "near_duplicate_candidate_count": 3,
+  "near_duplicate_hamming_threshold_128": 6,
+  "inventory_sha256": "47cd4ff39c2a5ab551434a58ddbe04ef0db14842d50befaba4ada3a9b1be2322",
+  "errors": [],
+  "warnings": [
+    "3 near-duplicate candidates involving labeled images require review",
+    "59 labeled RGB images require bilinear alignment to the mask grid during loading"
+  ]
+}

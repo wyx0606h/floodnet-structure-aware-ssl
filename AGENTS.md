@@ -7,8 +7,9 @@
 - Do not include UrbanSARFloods in the current main experiments. It is a future cross-modal direction.
 - Use PyTorch and SegFormer-B0 unless a decision is first recorded in the decision log.
 - Assume one GPU with approximately 24 GB VRAM and an initial crop size of 512×512.
-- The available dataset is the EARTHVISION 2021 Track 1 challenge release: 398 labeled training images, 1047 unlabeled training images, 450 validation images without public masks, and 448 test images without public masks.
-- Local metrics must use the versioned 278/60/60 split derived from the 398 public masks. Never report the challenge Validation/Test sets as locally evaluated ground truth.
+- The current main dataset is `FloodNet-Supervised_v1.0`: 1445 official training images, 450 validation images, and 448 test images, all with segmentation masks.
+- Main local metrics now use the official supervised Validation/Test masks from `splits/floodnet_supervised_v1/manifest.csv`.
+- The older EARTHVISION 2021 Track 1 challenge-release audit with 398 public masks, 1047 unlabeled training images, and the 278/60/60 split is retained only as a historical artifact. Do not compare old-protocol numbers directly with new supervised-protocol numbers.
 
 ## Required reading order
 
@@ -45,11 +46,11 @@ Treat these files as the persistent research memory.
 
 ## Immediate next objective
 
-Complete Week 1:
+Complete the current supervised comparison stage:
 
-1. merge-extract the seven Track 1 ZIP packages into one read-only data root;
-2. generate and version the canonical 278/60/60 multi-label stratified split;
-3. implement and unit-test the dataset, metrics, augmentations, and sliding-window inference;
-4. pass CPU smoke tests and a four-image overfit test locally;
-5. rent a GPU only after the local gate passes, then train the SegFormer-B0 supervised baseline;
-6. write the exact commands and update all three state files.
+1. keep both FloodNet data roots read-only;
+2. use `tools/build_floodnet_splits.py` to version the Challenge-derived 398 labeled IDs, 1047 unlabeled IDs, full 1445 train IDs, val 450 IDs, and test 448 IDs;
+3. train both `sup398` and `full1445` through the unified `train.py` entry point with matched SegFormer-B0, ImageNet pretrained weights, CE+Dice, AdamW, augmentations, crop/batch, max_iterations, seed, val/test, metrics, and sliding-window inference;
+4. use Validation only for checkpoint selection and Test only for final evaluation through `evaluate.py`;
+5. do not implement full `ssl398_1047` until the supervised comparison is verified;
+6. write exact commands and update registry, decision log, and handoff state after every run.

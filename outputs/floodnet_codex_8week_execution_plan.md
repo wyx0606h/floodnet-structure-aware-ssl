@@ -1,20 +1,21 @@
 # FloodNet 8 周 Codex 实验执行计划
 
 > 执行周期：2026-06-25 至 2026-08-19  
-> 当前前提：FloodNet 数据已准备，基线工程尚未确认  
+> 当前前提：完整 FloodNet supervised 数据已接入，官方 1445/450/448 split 成为主协议；代码闭环已完成，四图门尚未执行
 > 主要算力：单张约 24GB GPU  
 > 目标强度：IGARSS 级完整证据链  
 > 运行策略：有边界的自适应，所有路线调整先记录后执行
 
 ## 1. 文档用途
 
-本文件是后续 Codex 跨线程执行实验的主控制计划。任何新线程开始时，应按以下顺序读取：
+本文件是后续 Codex 跨线程执行实验的主控制计划。任何新线程或远程机器会话开始时，应先读取 `AGENTS.md`，再按其中规定的顺序读取持久研究记忆：
 
-1. `floodnet_codex_8week_execution_plan.md`；
-2. `floodnet_handoff_state.md`；
-3. `floodnet_decision_log.md`；
-4. `floodnet_experiment_registry.csv`；
-5. `floodnet_idea_experiment_spec.md` 中当前阶段相关章节。
+1. `outputs/floodnet_handoff_state.md`；
+2. `outputs/floodnet_decision_log.md`；
+3. `outputs/floodnet_codex_8week_execution_plan.md`；
+4. `outputs/floodnet_idea_experiment_spec.md`；
+5. `outputs/floodnet_experiment_registry.csv`；
+6. `outputs/floodnet_dataset_audit.md`。
 
 每次实验会话结束前必须：
 
@@ -30,7 +31,7 @@
 
 | 里程碑 | 截止日期 | 最低交付 |
 |---|---|---|
-| M1 数据与监督基线 | 2026-07-01 | 可复现 Local Full Supervision SegFormer-B0 与可信评测 |
+| M1 数据与监督基线 | 2026-07-01 | 可复现 Full Supervision SegFormer-B0 与可信评测 |
 | M2 半监督基线 | 2026-07-08 | 5%/10% Labeled Only、Pseudo Label、Mean Teacher |
 | M3 层次分解 | 2026-07-15 | Object-State 指标与消融 |
 | M4 边界建模 | 2026-07-22 | Boundary F1 与边界一致性实验 |
@@ -126,27 +127,39 @@ YYYYMMDD_method_labelpct_seed_variant
 
 **日期：2026-06-25 至 2026-07-01**
 
+### 4.0 截至 2026-06-27 的进度
+
+- 已完成七包安全合并、全量审计和近重复审查；
+- 已冻结主协议 `splits/floodnet_supervised_v1/`（Train/Validation/Test = 1445/450/448）；
+- 已完成 Dataset、指标、同步空间增强和滑窗概率融合；
+- 配置、SegFormer 适配器、监督训练/验证、checkpoint 和四图验收代码已完成；
+- 39 个单元测试与真实三子集 CPU DataLoader smoke test 已通过；
+- 统一模型输出、`build_model` factory 和默认禁用的多头网络骨架已实现；
+- 服务器只读环境检查、checkpoint 滑窗评估和 run 汇总脚本已实现；
+- 尚未运行四图像过拟合或任何正式训练。
+- 当前下一步是在服务器环境安装依赖后执行新 supervised 协议下的四图过拟合门。
+
 ### 4.1 目标
 
-先在本地建立可信数据管线、评测实现和可训练工程，再在付费 GPU 上运行 Local Full Supervision SegFormer-B0 基线。Week 1 结束前不实现关系模块。
+先在本地建立可信数据管线、评测实现和可训练工程，再在付费 GPU 上运行 Full Supervision SegFormer-B0 基线。Week 1 结束前不实现关系模块。
 
 ### 4.2 任务
 
 1. 将七个 ZIP 合并解压到仓库外的单一只读数据根目录；
-2. 枚举 398 张有标签、1047 张无标签和无公开掩码的 Validation/Test；
+2. 枚举完整 supervised 数据的 1445 张 Train、450 张 Validation、448 张 Test 及其 mask；
 3. 检查图像-掩码一一对应；
 4. 确认掩码格式、颜色表和类别 ID；
 5. 统计每类像素数、图像覆盖数和空类别；
 6. 检查重复图像、连续航拍近重复和潜在 split 泄漏；
 7. 随机可视化至少 30 组图像/掩码；
-8. 生成并版本化固定 278/60/60 多标签分层划分；
+8. 生成并版本化官方 supervised manifest；旧 278/60/60 仅保留为历史产物；
 9. 实现 FloodNet Dataset 和统一空间增强；
 10. 实现 mIoU-9、mIoU-10、Macro-F1、分类别 IoU；
 11. 实现 Building/Road 合并 IoU 和 State F1；
 12. 实现边界真值生成和 Boundary F1 单元测试；
 13. 实现滑动窗口测试和整图概率融合；
 14. 在 CPU 或本地可用设备完成加载、前向、反向和四图像过拟合测试；
-15. 本地门通过后租用 GPU，运行 SegFormer-B0 Local Full Supervision；
+15. 本地门通过后租用 GPU，运行 SegFormer-B0 Full Supervision；
 16. 重复同配置短跑两次，确认指标波动合理。
 
 ### 4.3 测试
@@ -163,7 +176,7 @@ YYYYMMDD_method_labelpct_seed_variant
 - 数据审计报告；
 - 类别统计 CSV；
 - 可视化样本图；
-- 278 张 Local Train 全监督基线配置与 checkpoint；
+- 1445 张 official Train 全监督基线配置与 checkpoint；
 - 首份指标报告；
 - 精确训练与测试命令。
 
