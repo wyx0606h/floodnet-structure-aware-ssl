@@ -184,3 +184,17 @@ No raw data, checkpoints, caches, `outputs/`, TensorBoard logs, or generated tra
 5. `structure-aware-pl` 是后置半监督阶段，不能在当前监督比较完成前作为主实验启动；正式运行前必须先补齐 confidence-only EMA baseline 与 matched coverage 比较。
 
 推荐优先级保持不变：先跑 state factorization，再跑 boundary context，最后跑 structure-aware pseudo-label filtering。原因是前两个模块仍是监督结构消融，能在当前 protocol 下直接和 `sup398` 公平比较；第三个模块引入无标签数据和 teacher-student 训练，变量更多，必须等待监督门禁通过后再进入。
+
+## 8. 2026-07-03 后续实验展开补充
+
+本项目中的半监督特指 `ssl398_1047`：398 张 labeled 图像使用官方 mask 计算监督损失，1047 张 unlabeled 图像只使用 RGB 图像，由 EMA teacher 产生伪标签后参与无标签损失。1047 张图像即使在本地 supervised 数据中存在 mask，也必须作为隐藏标签处理；这些 mask 只能用于离线伪标签质量审计，不能用于训练、调参、checkpoint 选择或 Test 前决策。
+
+后续暂定路线已经写入 `docs/experiments/control_variable_review.md` 和 `docs/experiments/structure_aware_pseudolabel.md`。核心顺序为：
+
+1. 完成 `sup398` 与 `full1445` 两个监督基线。
+2. 做监督错误分析，明确受灾状态、边界和水体混淆问题。
+3. 依次跑 `state-factorization` 与 `boundary-context` 的监督消融。
+4. 做 `sup398` teacher 的 1047 张 unlabeled 伪标签质量审计。
+5. 跑 EMA confidence-only 半监督基线。
+6. 在 matched coverage 下逐项加入 region、boundary、multiview 结构筛选。
+7. 仅对单 seed 通过门禁的配置做三 seed 和最终 Test。

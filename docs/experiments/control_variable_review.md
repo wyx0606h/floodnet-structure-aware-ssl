@@ -103,14 +103,26 @@
 
 该分支作为后续半监督 scaffold 合格，但实验严谨性依赖后续 baseline 和 matched coverage 执行。优先级第三。
 
-## 6. 推荐实验顺序
+## 6. 后续暂定实验顺序
 
-1. 完成当前 `sup398` 与 `full1445` 监督训练，确认 Validation/Test 流程和 checkpoint selection。
-2. 在 `sup398` 上跑 `state-factorization` 单 seed smoke/full，观察 affected mIoU、state macro-F1 和主 mIoU。
-3. 在 `sup398` 上跑 `boundary-context`，先跑 boundary loss only，再跑完整 context refinement。
-4. 若前两个监督结构模块至少有一个通过门禁，再启动 `structure-aware-pl` 的 confidence-only EMA baseline。
-5. 在 matched coverage 下比较 confidence-only 与 structure-aware pseudo-label filtering。
-6. 只对通过单 seed 门禁的模块做三 seed 均值和标准差。
+当前正在跑的 `sup398` 与 `full1445` 是后续全部实验的坐标系。`sup398` 是低标注监督下界，`full1445` 是同模型、同训练协议下的全监督上界。后续方法不仅要报告相对 `sup398` 的提升，也应报告缩小了多少监督差距：
+
+\[
+\text{gap closed} = \frac{\text{method} - \text{sup398}}{\text{full1445} - \text{sup398}}
+\]
+
+暂定顺序：
+
+1. 完成 `sup398` 与 `full1445` 监督训练：确认训练无 NaN、Validation 曲线正常、best checkpoint 只由 Validation 选择、Test 只最终评估。记录整体 mIoU、affected mIoU、state macro-F1、Boundary F1 和 per-class IoU。
+2. 做监督错误分析：比较 `sup398` 与 `full1445` 在 flooded building、flooded road、building/road 边界、水体混淆上的差异，明确后续结构模块要解决的主要错误类型。
+3. 跑 `state-factorization` 监督消融：按 `object only`、`object + state`、`object + state + JS consistency` 展开。若只提升 state macro-F1 但不提升 affected mIoU 或主 mIoU，应视为诊断性收益而非主贡献。
+4. 跑 `boundary-context` 监督消融：先跑 `boundary loss only`，再跑 `boundary loss + semantic-boundary consistency`，最后跑完整 `boundary context refinement`。必须区分收益来自边界辅助监督还是上下文建模。
+5. 生成监督阶段可视化：包含 per-class IoU 差值柱状图、flooded/non-flooded 混淆矩阵、边界预测图、典型成功/失败案例。这一步用于判断论文机制是否成立，而不是只看总 mIoU。
+6. 启动半监督前置审计：使用 `sup398` teacher 在 1047 张 unlabeled 图像上生成伪标签，先不训练 student，比较 confidence-only 与结构分数在 matched coverage 下的伪标签质量。隐藏 mask 只允许用于这个离线分析。
+7. 跑 EMA confidence-only SSL baseline：这是半监督最小对照，必须先完成，不能直接用完整 structure-aware PL 对比纯监督 `sup398`。
+8. 跑 structure-aware PL 消融：固定所有训练变量，逐项加入 region consistency、boundary stability、multiview consistency，最后跑完整 score，并在 20%、40%、60%、80% matched coverage 下比较。
+9. 尝试结构模块组合：只有当 state 或 boundary 在监督阶段通过门禁时，才把对应结构信号接入 SSL；否则不强行组合，避免变量过多导致归因不清。
+10. 三 seed 与最终 Test：只对单 seed 通过门禁的配置做三 seed 均值/标准差。所有超参和 checkpoint 选择固定后，再对 Test 448 做最终评估。
 
 ## 7. 当前阶段禁止事项
 
