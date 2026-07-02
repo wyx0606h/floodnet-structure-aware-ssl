@@ -1,11 +1,34 @@
-# FloodNet SegFormer-B0 Supervised Baselines
+# FloodNet Structure-Aware SSL
 
-本仓库用于 FloodNet 洪灾无人机影像十类语义分割实验。当前阶段先建立统一、可复现的监督基线，比较两种训练标签规模：
+本仓库用于 FloodNet 洪灾无人机影像十类语义分割实验。当前主线是先建立统一、可复现的 SegFormer-B0 监督基线，再在同一协议下研究结构感知半监督分割。
+
+当前监督基线比较两种训练标签规模：
 
 - `sup398`：使用 Challenge 官方 398 张 labeled train 图像；
 - `full1445`：使用完整监督版 1445 张 train 图像；
 
-两组实验除训练标签数量和实验名外，保持模型、预训练权重、损失、优化器、增强、crop size、batch size、`max_iterations`、Validation/Test、指标、滑窗推理方式和 seed 一致。后续 `ssl398_1047` 会在同一协议结构上加入 1047 张 unlabeled、EMA teacher 和伪标签，本轮不实现完整半监督训练。
+两组实验除训练标签数量和实验名外，保持模型、预训练权重、损失、优化器、增强、crop size、batch size、`max_iterations`、Validation/Test、指标、滑窗推理方式和 seed 一致。
+
+后续 `ssl398_1047` 指半监督协议：398 张 labeled 图像使用真实 mask 计算监督损失，1047 张 unlabeled 图像只使用 RGB 图像，由 EMA teacher 产生伪标签后参与无标签损失。1047 张图像的 mask 即使本地存在，也只能用于离线伪标签质量审计，不能用于训练、阈值选择或 checkpoint 选择。
+
+## 当前研究分支
+
+`main` 保存稳定监督基线、研究计划和中文实验设计文档。三个实验分支均从同一个 main 提交创建，并已推送到远程：
+
+| 分支 | 目标 | 文档 |
+|---|---|---|
+| `exp/state-factorization` | 将建筑/道路类别分解为物体身份、flooded/non-flooded 状态，并加入层次一致性约束 | `docs/experiments/state_factorization.md` |
+| `exp/boundary-context` | 从 mask 派生边界监督，并用边界门控语义上下文聚合，不只是普通 boundary loss | `docs/experiments/boundary_context.md` |
+| `exp/structure-aware-pl` | EMA teacher-student 半监督入口，结合置信度、多视图、边界稳定性和区域一致性筛选伪标签 | `docs/experiments/structure_aware_pseudolabel.md` |
+
+统一控制变量审查和后续实验顺序见：
+
+```text
+docs/research/innovation_plan.md
+docs/experiments/control_variable_review.md
+```
+
+当前阶段门禁仍然是完成 `sup398` 与 `full1445` 监督比较。不要在监督比较完成前启动正式 SSL 主实验。
 
 ## 环境安装
 
@@ -189,6 +212,34 @@ outputs/<experiment_name>/
 
 指标包括 confusion matrix、Pixel Accuracy、每类 IoU、mIoU、每类 Precision/Recall/F1、macro-F1 和 Flooded-mIoU。
 
+
+## 结果管理与后续分析
+
+训练服务器上的完整输出、checkpoint、TensorBoard event、预测 mask 和大体积缓存不要提交到 Git。建议将服务器结果下载到仓库外的 F 盘目录，例如：
+
+```text
+F:\FloodNetRuns\
+├── sup398\
+├── full1445\
+├── state_factorization\
+├── boundary_context\
+├── ssl_confidence_only\
+└── ssl_structure_aware\
+```
+
+每个实验目录建议至少保留小型分析文件：
+
+```text
+config.yaml
+metrics.json 或 metrics.csv
+validation_history.csv
+test_metrics.json
+confusion_matrix.csv
+per_class_iou.csv
+train.log
+```
+
+后续分析时可以从 F 盘读取这些结果，在本仓库中生成汇总表、论文图、错误分析和报告。Git 中优先提交分析脚本、`docs/` 文档、少量最终汇总表；不要提交原始数据、权重、缓存、训练输出目录或未定稿的大量预测文件。
 ## 主要入口
 
 ```text
