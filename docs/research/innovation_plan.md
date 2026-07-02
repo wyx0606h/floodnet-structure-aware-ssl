@@ -157,3 +157,30 @@ All three branches will be created from the same main commit containing this pla
 - Unit tests and dry-run commands.
 
 No raw data, checkpoints, caches, `outputs/`, TensorBoard logs, or generated training artifacts will be committed.
+
+## 7. 2026-07-03 中文设计展开与控制变量复核
+
+当前状态：`sup398` 与 `full1445` 两个监督实验正在运行，尚未形成可汇报最终结果。三个结构模块已经分别在独立分支实现并通过单元测试与 dry-run；当前 main 只记录研究设计、审查结论和后续执行约束，不记录任何未完成训练的结果。
+
+详细中文设计文档：
+
+- `docs/experiments/state_factorization.md`
+- `docs/experiments/boundary_context.md`
+- `docs/experiments/structure_aware_pseudolabel.md`
+- `docs/experiments/control_variable_review.md`
+
+分支与提交：
+
+- `exp/state-factorization`：`8332c34`
+- `exp/boundary-context`：`dd88bff`
+- `exp/structure-aware-pl`：`a39ce76`
+
+复核结论：
+
+1. 三个分支均从共同 main 提交 `d4fedcf` 创建，满足同源分支要求。
+2. 三个分支均未修改 FloodNet 数据划分和类别编号。
+3. 两个监督结构分支保持与 `sup398` 基线一致的 SegFormer-B0、ImageNet 预训练、CE+Dice、AdamW、512 crop、40000 iterations、Validation checkpoint selection 和 sliding-window evaluation。
+4. 新功能均通过 YAML 控制，原有 `sup398` 和 `full1445` 基线配置不启用新增模块。
+5. `structure-aware-pl` 是后置半监督阶段，不能在当前监督比较完成前作为主实验启动；正式运行前必须先补齐 confidence-only EMA baseline 与 matched coverage 比较。
+
+推荐优先级保持不变：先跑 state factorization，再跑 boundary context，最后跑 structure-aware pseudo-label filtering。原因是前两个模块仍是监督结构消融，能在当前 protocol 下直接和 `sup398` 公平比较；第三个模块引入无标签数据和 teacher-student 训练，变量更多，必须等待监督门禁通过后再进入。
