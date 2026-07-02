@@ -29,8 +29,8 @@ from floodnet_ssl.experiment import (  # noqa: E402
     write_metrics_files,
     write_resolved_yaml,
 )
-from floodnet_ssl.losses import segmentation_loss  # noqa: E402
-from floodnet_ssl.models import build_model, extract_logits  # noqa: E402
+from floodnet_ssl.losses import supervised_objective  # noqa: E402
+from floodnet_ssl.models import SegmentationModelOutput, build_model, extract_logits  # noqa: E402
 from floodnet_ssl.training import build_optimizer, collect_runtime_metadata, set_reproducible_seed  # noqa: E402
 
 
@@ -166,8 +166,14 @@ def main() -> int:
             labels = batch["mask"].to(device)
             amp_enabled = use_amp and device.type == "cuda"
             with torch.autocast(device_type=device.type, enabled=amp_enabled):
-                logits = _resize_logits(extract_logits(model(images)), labels)
-                loss = segmentation_loss(logits, labels, config.get("loss")) / grad_accum
+                model_output = model(images)
+                logits = _resize_logits(extract_logits(model_output), labels)
+                loss_output = (
+                    SegmentationModelOutput(logits=logits, auxiliary=model_output.auxiliary)
+                    if isinstance(model_output, SegmentationModelOutput)
+                    else logits
+                )
+                loss = supervised_objective(loss_output, labels, config) / grad_accum
             scaler.scale(loss).backward()
             loss_value += float(loss.detach())
         clip_norm = training.get("gradient_clip_norm")
@@ -240,3 +246,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

@@ -84,6 +84,41 @@ class MultiHeadSegmentationModel(torch.nn.Module):
             name: head(features) for name, head in self.auxiliary_heads.items()
         }
         return SegmentationModelOutput(logits=logits, auxiliary=auxiliary)
+
+
+class LogitAuxiliaryWrapper(torch.nn.Module):
+    """Attach lightweight auxiliary heads to a segmentation model's logits."""
+
+    def __init__(
+        self,
+        base_model: torch.nn.Module,
+        *,
+        num_labels: int,
+        enabled_auxiliary_heads: Sequence[str],
+    ) -> None:
+        super().__init__()
+        unknown = sorted(set(enabled_auxiliary_heads) - set(AUXILIARY_HEAD_NUM_LABELS))
+        if unknown:
+            raise ValueError(f"Unknown auxiliary head(s): {', '.join(unknown)}")
+        self.base_model = base_model
+        self.auxiliary_heads = torch.nn.ModuleDict(
+            {
+                name: ConvPredictionHead(num_labels, AUXILIARY_HEAD_NUM_LABELS[name])
+                for name in enabled_auxiliary_heads
+            }
+        )
+
+    def forward(self, image: torch.Tensor) -> SegmentationModelOutput:
+        base_output = self.base_model(image)
+        logits = extract_logits(base_output)
+        auxiliary = {
+            name: head(logits) for name, head in self.auxiliary_heads.items()
+        }
+        if isinstance(base_output, SegmentationModelOutput):
+            auxiliary = {**dict(base_output.auxiliary), **auxiliary}
+        return SegmentationModelOutput(logits=logits, auxiliary=auxiliary)
+
+
 def segformer_dependency_status() -> dict[str, bool]:
     return {
         package: importlib.util.find_spec(package) is not None
@@ -147,7 +182,15 @@ def build_model(model_config: Mapping[str, Any]) -> torch.nn.Module:
 
     name = str(model_config.get("name", "segformer_b0"))
     if name == "segformer_b0":
-        return build_segformer_b0(model_config)
+        model = build_segformer_b0(model_config)
+        enabled_auxiliary_heads = tuple(model_config.get("auxiliary_heads", ()))
+        if enabled_auxiliary_heads:
+            model = LogitAuxiliaryWrapper(
+                model,
+                num_labels=int(model_config.get("num_labels", len(CLASS_NAMES))),
+                enabled_auxiliary_heads=enabled_auxiliary_heads,
+            )
+        return model
     raise UnsupportedModelError(f"Unsupported model.name: {name}")
 
 
@@ -161,3 +204,4 @@ def extract_logits(output: object) -> torch.Tensor:
     if isinstance(output, dict) and torch.is_tensor(output.get("logits")):
         return output["logits"]
     raise TypeError("Model output must be a tensor or expose tensor logits")
+

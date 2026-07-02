@@ -68,6 +68,9 @@ def validate_supervised_config(config: Mapping[str, Any]) -> None:
     loss = config.get("loss", {})
     if loss is not None and not isinstance(loss, Mapping):
         raise ConfigError("Config section 'loss' must be a mapping")
+    modules = config.get("modules", {})
+    if modules is not None and not isinstance(modules, Mapping):
+        raise ConfigError("Config section 'modules' must be a mapping")
 
     if not str(experiment.get("run_id", "")).strip():
         raise ConfigError("experiment.run_id is required")
@@ -94,6 +97,14 @@ def validate_supervised_config(config: Mapping[str, Any]) -> None:
         raise ConfigError("Week 1 model.name must be 'segformer_b0'")
     if int(model.get("num_labels", -1)) != 10:
         raise ConfigError("model.num_labels must be 10")
+    auxiliary_heads = model.get("auxiliary_heads", ())
+    if auxiliary_heads in (None, ""):
+        auxiliary_heads = ()
+    if not isinstance(auxiliary_heads, (list, tuple)):
+        raise ConfigError("model.auxiliary_heads must be a list when set")
+    unknown_heads = sorted(set(auxiliary_heads) - {"object", "state", "boundary", "relation"})
+    if unknown_heads:
+        raise ConfigError(f"Unknown model.auxiliary_heads: {unknown_heads}")
     if model.get("pretrained") and not str(
         model.get("pretrained_model_name_or_path", "")
     ).strip():
@@ -150,3 +161,12 @@ def validate_supervised_config(config: Mapping[str, Any]) -> None:
         loss_name = str(loss.get("name", "ce_dice")).casefold()
         if loss_name not in {"ce", "cross_entropy", "ce_dice", "cross_entropy_dice"}:
             raise ConfigError("loss.name must be cross_entropy or ce_dice")
+    if modules:
+        state_factorization = modules.get("state_factorization", {})
+        if state_factorization and not isinstance(state_factorization, Mapping):
+            raise ConfigError("modules.state_factorization must be a mapping")
+        if bool((state_factorization or {}).get("enabled", False)):
+            required = {"object", "state"}
+            if not required.issubset(set(auxiliary_heads)):
+                raise ConfigError("state_factorization requires object and state auxiliary heads")
+

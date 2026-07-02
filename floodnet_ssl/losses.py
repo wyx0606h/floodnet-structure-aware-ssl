@@ -8,6 +8,8 @@ import torch
 import torch.nn.functional as F
 
 from .constants import IGNORE_INDEX, NUM_CLASSES
+from .models import SegmentationModelOutput, extract_logits
+from .state_factorization import state_factorization_loss
 
 
 def multiclass_dice_loss(
@@ -63,3 +65,34 @@ def segmentation_loss(
         dice = multiclass_dice_loss(logits, target, ignore_index=ignore_index)
         return ce_weight * ce + dice_weight * dice
     raise ValueError(f"Unsupported loss.name: {name}")
+
+def supervised_objective(
+    output: object,
+    target: torch.Tensor,
+    config: Mapping[str, Any] | None = None,
+    *,
+    ignore_index: int = IGNORE_INDEX,
+) -> torch.Tensor:
+    """Compute semantic loss plus any enabled config-gated auxiliary losses."""
+
+    config = dict(config or {})
+    logits = extract_logits(output)
+    total = segmentation_loss(
+        logits,
+        target,
+        config.get("loss"),
+        ignore_index=ignore_index,
+    )
+    modules = config.get("modules", {})
+    state_config = modules.get("state_factorization", {}) if isinstance(modules, Mapping) else {}
+    auxiliary = output.auxiliary if isinstance(output, SegmentationModelOutput) else {}
+    total = total + state_factorization_loss(
+        semantic_logits=logits,
+        auxiliary=auxiliary,
+        target=target,
+        config=state_config,
+        ignore_index=ignore_index,
+    )
+    return total
+
+
