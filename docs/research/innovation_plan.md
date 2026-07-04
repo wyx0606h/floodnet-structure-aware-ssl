@@ -160,7 +160,7 @@ No raw data, checkpoints, caches, `outputs/`, TensorBoard logs, or generated tra
 
 ## 7. 2026-07-03 中文设计展开与控制变量复核
 
-当前状态：`sup398` 与 `full1445` 两个监督实验正在运行，尚未形成可汇报最终结果。三个结构模块已经分别在独立分支实现并通过单元测试与 dry-run；当前 main 只记录研究设计、审查结论和后续执行约束，不记录任何未完成训练的结果。
+当前状态：`sup398` 与 `full1445` 两个监督实验的 first-seed run 已完成，结果整理见 `docs/experiments/supervised_comparison_results.md`。三个结构模块已经分别在独立分支实现并通过单元测试与 dry-run；当前 main 记录研究设计、审查结论、监督对照结果和后续执行约束，不提交任何原始训练产物。
 
 详细中文设计文档：
 
@@ -183,7 +183,7 @@ No raw data, checkpoints, caches, `outputs/`, TensorBoard logs, or generated tra
 4. 新功能均通过 YAML 控制，原有 `sup398` 和 `full1445` 基线配置不启用新增模块。
 5. `structure-aware-pl` 是后置半监督阶段，不能在当前监督比较完成前作为主实验启动；正式运行前必须先补齐 confidence-only EMA baseline 与 matched coverage 比较。
 
-推荐优先级保持不变：先跑 state factorization，再跑 boundary context，最后跑 structure-aware pseudo-label filtering。原因是前两个模块仍是监督结构消融，能在当前 protocol 下直接和 `sup398` 公平比较；第三个模块引入无标签数据和 teacher-student 训练，变量更多，必须等待监督门禁通过后再进入。
+推荐优先级保持不变：先跑 state factorization，再跑 boundary context，最后跑 structure-aware pseudo-label filtering。原因是前两个模块仍是监督结构消融，能在当前 protocol 下直接和 `sup398` 公平比较；第三个模块引入无标签数据和 teacher-student 训练，变量更多，必须先建立 EMA confidence-only baseline。
 
 ## 8. 2026-07-03 后续实验展开补充
 
@@ -191,10 +191,28 @@ No raw data, checkpoints, caches, `outputs/`, TensorBoard logs, or generated tra
 
 后续暂定路线已经写入 `docs/experiments/control_variable_review.md` 和 `docs/experiments/structure_aware_pseudolabel.md`。核心顺序为：
 
-1. 完成 `sup398` 与 `full1445` 两个监督基线。
+1. 完成 `sup398` 与 `full1445` 两个监督基线。（已完成 first-seed 结果整理）
 2. 做监督错误分析，明确受灾状态、边界和水体混淆问题。
 3. 依次跑 `state-factorization` 与 `boundary-context` 的监督消融。
 4. 做 `sup398` teacher 的 1047 张 unlabeled 伪标签质量审计。
 5. 跑 EMA confidence-only 半监督基线。
 6. 在 matched coverage 下逐项加入 region、boundary、multiview 结构筛选。
 7. 仅对单 seed 通过门禁的配置做三 seed 和最终 Test。
+
+## 9. 2026-07-04 Supervised Gate Result
+
+The first supervised comparison under the current FloodNet supervised protocol is complete. Both runs use SegFormer-B0, ImageNet pretraining, CE+Dice, AdamW, 512 crop, effective batch size 8, 40000 optimizer steps, fixed seed 20260702, Validation checkpoint selection, and sliding-window Test evaluation.
+
+| Method | Train labels | Best Val Iter | Test mIoU-10 | Test mIoU-9 | Test Macro-F1 | Test Affected mIoU |
+|---|---:|---:|---:|---:|---:|---:|
+| SegFormer-B0 `sup398` | 398 | 18000 | 47.67 | 52.77 | 60.89 | 34.34 |
+| SegFormer-B0 `full1445` | 1445 | 32000 | 52.74 | 57.75 | 66.00 | 38.10 |
+
+Interpretation:
+
+1. `full1445` improves over `sup398` by 4.98 Test mIoU-9 and 3.77 Test affected mIoU, so the supervised comparison behaves as expected.
+2. The gain is not only from dominant classes: grouped Building IoU, grouped Road IoU, and State Macro-F1 all improve, supporting the relevance of object/state analysis.
+3. Boundary F1 improves only marginally, leaving a clear role for a boundary-specific supervised ablation.
+4. Background IoU remains weak in both settings, so future tables should report both mIoU-10 and mIoU-9.
+
+Gate decision: the supervised comparison stage is sufficient to start fixed-seed supervised structure ablations. The next run should be `exp/state-factorization`, followed by `exp/boundary-context`. SSL experiments should still begin with an EMA confidence-only baseline before any structure-aware pseudo-label claim.

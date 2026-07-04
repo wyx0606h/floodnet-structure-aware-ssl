@@ -20,12 +20,19 @@
 - 训练使用固定 `max_iterations`，按 Validation mIoU 保存 `best_miou.pth` 和 `last.pth`；
 - 评估统一使用滑窗推理和同一套 metrics。
 
+### 当前完成项更新
+
+- `sup398` 与 `full1445` 的 first-seed 正式监督训练已经完成；
+- 两个 run 均训练到 40000 optimizer steps，并按 Validation mIoU 选择 `best_miou.pth`；
+- Test 448 仅在 best checkpoint 固定后评估；
+- 详细结果与分析记录在 `docs/experiments/supervised_comparison_results.md`。
+
 ### 待完成项
 
-- 在服务器安装依赖后运行真实 SegFormer-B0 forward 和训练；
-- 生成真实 split 文件并提交可审计名单；
-- 运行 `sup398` 和 `full1445` 三种 seed 的正式实验；
-- 后续实现 `ssl398_1047` 的 unlabeled loader、EMA Teacher 和伪标签训练。
+- 后续结构模块实验先以固定 seed 进行 pilot 对照；
+- 优先运行 `state-factorization`，再运行 `boundary-context`；
+- 启动半监督前必须先补齐 EMA confidence-only baseline；
+- 若算力允许，仅对核心最终方法和关键 baseline 补充多 seed 统计。
 
 ### 配置文件
 
@@ -44,12 +51,14 @@ python evaluate.py --config configs/segformer_b0_sup398.yaml --supervised-root "
 python evaluate.py --config configs/segformer_b0_sup398.yaml --supervised-root "$SUPERVISED_ROOT" --checkpoint outputs/segformer_b0_sup398/checkpoints/best_miou.pth --split test
 ```
 
-### 实验结果占位表
+### 实验结果摘要
 
-| 实验 | Seed | Val mIoU | Val macro-F1 | Test mIoU | Test macro-F1 | Flooded-mIoU | 备注 |
-|---|---:|---:|---:|---:|---:|---:|---|
-| `sup398` | 20260702 | TBD | TBD | TBD | TBD | TBD | 未训练 |
-| `full1445` | 20260702 | TBD | TBD | TBD | TBD | TBD | 未训练 |
+Validation 只用于 checkpoint 选择；论文或报告中优先使用 `test_best` 指标。
+
+| 实验 | Seed | Best Val Iter | Val mIoU-10 | Val mIoU-9 | Test mIoU-10 | Test mIoU-9 | Test macro-F1 | Test affected-mIoU | 备注 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| `sup398` | 20260702 | 18000 | 49.88 | 55.31 | 47.67 | 52.77 | 60.89 | 34.34 | completed |
+| `full1445` | 20260702 | 32000 | 56.73 | 61.61 | 52.74 | 57.75 | 66.00 | 38.10 | completed |
 
 ## 2026-07-02 配置统一审查
 
@@ -75,10 +84,33 @@ python evaluate.py --config configs/segformer_b0_sup398.yaml --supervised-root "
 
 ### 结果记录
 
-| 实验 | 类型 | Seed | Steps | Val mIoU | Test mIoU | 备注 |
-|---|---|---:|---:|---:|---:|---|
-| `sup398` | GPU smoke | 20260702 | 50–100 | TBD | - | 未运行 |
-| `full1445` | GPU smoke | 20260702 | 50–100 | TBD | - | 未运行 |
-| `sup398` | 正式训练 | 20260702 | 40000 | TBD | TBD | 未运行 |
-| `full1445` | 正式训练 | 20260702 | 40000 | TBD | TBD | 未运行 |
+| 实验 | 类型 | Seed | Steps | Best Val mIoU-10 | Test mIoU-10 | Test mIoU-9 | Test affected-mIoU | 备注 |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| `sup398` | 正式训练 | 20260702 | 40000 | 49.88 | 47.67 | 52.77 | 34.34 | best iter 18000 |
+| `full1445` | 正式训练 | 20260702 | 40000 | 56.73 | 52.74 | 57.75 | 38.10 | best iter 32000 |
+
+## 2026-07-04 监督对照结果分析
+
+### 结论
+
+`full1445` 在 Test mIoU-9、Macro-F1 和 Affected mIoU 上均优于 `sup398`，说明统一监督协议下的全监督上界方向合理。`sup398` 可作为后续少标注监督模块的固定基线，`full1445` 可作为同骨干、同训练协议下的监督上界参考。
+
+### 关键观察
+
+- Test mIoU-9 从 52.77 提升到 57.75，提升 4.98 点；
+- Test affected-mIoU 从 34.34 提升到 38.10，提升 3.77 点；
+- grouped Building IoU 从 42.93 提升到 52.75；
+- grouped Road IoU 从 43.53 提升到 50.52；
+- State Macro-F1 从 68.99 提升到 80.49；
+- Boundary F1 仅从 16.36 提升到 16.85，说明后续 boundary 模块仍有独立验证空间；
+- Background IoU 在两组中都偏低，报告时应同时给出 mIoU-10 与 mIoU-9，并在分析中说明 Background 类的异质性和混淆问题。
+
+### 后续执行
+
+监督比较门禁已通过，可以进入结构模块 pilot：
+
+1. `exp/state-factorization`；
+2. `exp/boundary-context`；
+3. EMA confidence-only SSL baseline；
+4. structure-aware pseudo-label filtering。
 

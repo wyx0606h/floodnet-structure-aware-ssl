@@ -57,6 +57,14 @@
 - macro-F1；
 - Flooded-mIoU = (Building Flooded IoU + Road Flooded IoU) / 2。
 
+## 结果汇报规则
+
+当前算力预算下，监督基线和结构模块 pilot 优先采用固定 seed 的单次结果进行横向比较。表格中直接报告单值，不写作 mean +/- std，也不把单次小幅提升描述为统计显著。论文或报告中应说明：
+
+> Unless otherwise specified, all experiments are conducted under the same data split and training protocol with a fixed random seed for reproducibility.
+
+若后续算力允许，只对关键 baseline、最强对比方法和最终完整方法补充多 seed mean +/- std。
+
 ## 当前 SegFormer-B0 统一训练配置
 
 2026-07-02 统一 `configs/segformer_b0_sup398.yaml` 与 `configs/segformer_b0_full1445.yaml`，除实验名、protocol、训练 list/manifest 外，其余关键参数一致：

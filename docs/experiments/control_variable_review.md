@@ -2,7 +2,7 @@
 
 日期：2026-07-03
 审查对象：`exp/state-factorization`、`exp/boundary-context`、`exp/structure-aware-pl`
-当前进度：`sup398` 与 `full1445` 两个监督实验正在运行，尚未形成可汇报最终数值。
+当前进度：`sup398` 与 `full1445` 两个监督实验的 first-seed run 已完成，`test_best` 结果已整理到 `docs/experiments/supervised_comparison_results.md`。
 
 ## 1. 总体结论
 
@@ -105,7 +105,14 @@
 
 ## 6. 后续暂定实验顺序
 
-当前正在跑的 `sup398` 与 `full1445` 是后续全部实验的坐标系。`sup398` 是低标注监督下界，`full1445` 是同模型、同训练协议下的全监督上界。后续方法不仅要报告相对 `sup398` 的提升，也应报告缩小了多少监督差距：
+当前已经完成的 `sup398` 与 `full1445` 是后续全部实验的坐标系。`sup398` 是低标注监督下界，`full1445` 是同模型、同训练协议下的全监督上界。当前 first-seed Test 结果为：
+
+| Method | Test mIoU-10 | Test mIoU-9 | Test affected-mIoU | Test State Macro-F1 | Test Boundary F1 |
+|---|---:|---:|---:|---:|---:|
+| `sup398` | 47.67 | 52.77 | 34.34 | 68.99 | 16.36 |
+| `full1445` | 52.74 | 57.75 | 38.10 | 80.49 | 16.85 |
+
+后续方法不仅要报告相对 `sup398` 的提升，也应报告缩小了多少监督差距：
 
 \[
 \text{gap closed} = \frac{\text{method} - \text{sup398}}{\text{full1445} - \text{sup398}}
@@ -113,7 +120,7 @@
 
 暂定顺序：
 
-1. 完成 `sup398` 与 `full1445` 监督训练：确认训练无 NaN、Validation 曲线正常、best checkpoint 只由 Validation 选择、Test 只最终评估。记录整体 mIoU、affected mIoU、state macro-F1、Boundary F1 和 per-class IoU。
+1. 完成 `sup398` 与 `full1445` 监督训练：已完成 first-seed run。Validation 曲线正常，best checkpoint 只由 Validation 选择，Test 只最终评估。当前结果支持进入结构模块 pilot。
 2. 做监督错误分析：比较 `sup398` 与 `full1445` 在 flooded building、flooded road、building/road 边界、水体混淆上的差异，明确后续结构模块要解决的主要错误类型。
 3. 跑 `state-factorization` 监督消融：按 `object only`、`object + state`、`object + state + JS consistency` 展开。若只提升 state macro-F1 但不提升 affected mIoU 或主 mIoU，应视为诊断性收益而非主贡献。
 4. 跑 `boundary-context` 监督消融：先跑 `boundary loss only`，再跑 `boundary loss + semantic-boundary consistency`，最后跑完整 `boundary context refinement`。必须区分收益来自边界辅助监督还是上下文建模。
