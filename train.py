@@ -29,7 +29,7 @@ from floodnet_ssl.experiment import (  # noqa: E402
     write_metrics_files,
     write_resolved_yaml,
 )
-from floodnet_ssl.losses import supervised_objective  # noqa: E402
+from floodnet_ssl.losses import supervised_objective_components  # noqa: E402
 from floodnet_ssl.models import SegmentationModelOutput, build_model, extract_logits  # noqa: E402
 from floodnet_ssl.training import build_optimizer, collect_runtime_metadata, set_reproducible_seed  # noqa: E402
 
@@ -109,6 +109,7 @@ def main() -> int:
         "validation_samples": len(val_dataset),
         "model": config["model"],
         "loss": config.get("loss", {"name": "ce_dice"}),
+        "modules": config.get("modules", {}),
         "training": training,
     }
     print(json.dumps(plan, ensure_ascii=False, indent=2))
@@ -160,6 +161,10 @@ def main() -> int:
         _set_optimizer_lr(optimizer, current_lr)
         optimizer.zero_grad(set_to_none=True)
         loss_value = 0.0
+        component_values = {
+            name: 0.0
+            for name in ("semantic", "factorization", "object", "state", "consistency")
+        }
         for _ in range(grad_accum):
             batch = next(train_iter)
             images = batch["image"].to(device)
@@ -173,9 +178,12 @@ def main() -> int:
                     if isinstance(model_output, SegmentationModelOutput)
                     else logits
                 )
-                loss = supervised_objective(loss_output, labels, config) / grad_accum
+                objective = supervised_objective_components(loss_output, labels, config)
+                loss = objective["total"] / grad_accum
             scaler.scale(loss).backward()
             loss_value += float(loss.detach())
+            for name in component_values:
+                component_values[name] += float(objective[name].detach()) / grad_accum
         clip_norm = training.get("gradient_clip_norm")
         if clip_norm not in (None, ""):
             scaler.unscale_(optimizer)
@@ -184,7 +192,12 @@ def main() -> int:
         scaler.update()
 
         should_eval = iteration == 1 or iteration % val_interval == 0 or iteration == max_iterations
-        row: dict[str, Any] = {"iteration": iteration, "train_loss": loss_value, "learning_rate": current_lr}
+        row: dict[str, Any] = {
+            "iteration": iteration,
+            "train_loss": loss_value,
+            "learning_rate": current_lr,
+            **{f"train_loss_{name}": value for name, value in component_values.items()},
+        }
         if should_eval:
             val_payload = evaluate_model(
                 model,

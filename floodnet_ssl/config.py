@@ -105,6 +105,39 @@ def validate_supervised_config(config: Mapping[str, Any]) -> None:
     unknown_heads = sorted(set(auxiliary_heads) - {"object", "state", "boundary", "relation"})
     if unknown_heads:
         raise ConfigError(f"Unknown model.auxiliary_heads: {unknown_heads}")
+    model_factorization = model.get("state_factorization", {})
+    if model_factorization and not isinstance(model_factorization, Mapping):
+        raise ConfigError("model.state_factorization must be a mapping")
+    if bool((model_factorization or {}).get("enabled", False)):
+        feature_source = str(
+            model_factorization.get("feature_source", "encoder_multiscale")
+        )
+        if feature_source not in {"logits", "encoder_multiscale"}:
+            raise ConfigError(
+                "model.state_factorization.feature_source must be logits or encoder_multiscale"
+            )
+        decoder_channels = model_factorization.get("decoder_channels", 64)
+        if (
+            not isinstance(decoder_channels, int)
+            or isinstance(decoder_channels, bool)
+            or decoder_channels <= 0
+        ):
+            raise ConfigError("model.state_factorization.decoder_channels must be positive")
+        state_mode = str(model_factorization.get("state_mode", "conditional"))
+        if state_mode not in {"shared", "conditional"}:
+            raise ConfigError("model.state_factorization.state_mode must be shared or conditional")
+        fusion_weight = model_factorization.get("fusion_weight", 0.0)
+        if not isinstance(fusion_weight, (int, float)) or not 0 <= fusion_weight <= 1:
+            raise ConfigError("model.state_factorization.fusion_weight must be in [0, 1]")
+        dropout = model_factorization.get("dropout", 0.1)
+        if not isinstance(dropout, (int, float)) or not 0 <= dropout < 1:
+            raise ConfigError("model.state_factorization.dropout must be in [0, 1)")
+        if feature_source == "logits" and (
+            state_mode != "shared" or float(fusion_weight) != 0.0
+        ):
+            raise ConfigError(
+                "logits feature_source supports only state_mode=shared and fusion_weight=0"
+            )
     if model.get("pretrained") and not str(
         model.get("pretrained_model_name_or_path", "")
     ).strip():
@@ -169,4 +202,25 @@ def validate_supervised_config(config: Mapping[str, Any]) -> None:
             required = {"object", "state"}
             if not required.issubset(set(auxiliary_heads)):
                 raise ConfigError("state_factorization requires object and state auxiliary heads")
+            if not bool((model_factorization or {}).get("enabled", False)):
+                raise ConfigError(
+                    "modules.state_factorization requires model.state_factorization.enabled"
+                )
+            for key in (
+                "object_weight",
+                "state_weight",
+                "consistency_weight",
+                "object_dice_weight",
+                "state_dice_weight",
+            ):
+                value = state_factorization.get(key, 0.0)
+                if not isinstance(value, (int, float)) or value < 0:
+                    raise ConfigError(f"modules.state_factorization.{key} must be non-negative")
+            reduction = str(
+                state_factorization.get("consistency_reduction", "class_mean")
+            )
+            if reduction not in {"pixel_mean", "class_mean"}:
+                raise ConfigError(
+                    "modules.state_factorization.consistency_reduction must be pixel_mean or class_mean"
+                )
 

@@ -38,6 +38,14 @@ model:
   pretrained_model_name_or_path: nvidia/mit-b0
   local_files_only: false
   auxiliary_heads: [object, state]
+  state_factorization:
+    enabled: true
+    feature_source: encoder_multiscale
+    decoder_channels: 64
+    dropout: 0.1
+    state_mode: conditional
+    detach_object_posterior: false
+    fusion_weight: 0.25
 
 loss:
   name: ce_dice
@@ -50,6 +58,9 @@ modules:
     object_weight: 0.25
     state_weight: 0.25
     consistency_weight: 0.1
+    object_dice_weight: 1.0
+    state_dice_weight: 1.0
+    consistency_reduction: class_mean
 
 training:
   max_iterations: 40000

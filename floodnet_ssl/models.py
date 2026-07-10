@@ -7,8 +7,14 @@ import importlib.util
 from typing import Any, Mapping, Sequence
 
 import torch
+import torch.nn.functional as F
 
 from .constants import CLASS_NAMES
+from .state_factorization import (
+    CONDITIONAL_STATE_CHANNELS,
+    compose_hierarchical_probabilities,
+    fuse_semantic_and_hierarchical_logits,
+)
 
 
 AUXILIARY_HEAD_NUM_LABELS = {
@@ -119,6 +125,184 @@ class LogitAuxiliaryWrapper(torch.nn.Module):
         return SegmentationModelOutput(logits=logits, auxiliary=auxiliary)
 
 
+class MultiScaleFactorDecoder(torch.nn.Module):
+    """Fuse all SegFormer encoder stages without changing its semantic decoder."""
+
+    def __init__(
+        self,
+        hidden_sizes: Sequence[int],
+        *,
+        decoder_channels: int,
+        dropout: float,
+    ) -> None:
+        super().__init__()
+        if not hidden_sizes:
+            raise ValueError("hidden_sizes must contain at least one encoder stage")
+        if decoder_channels <= 0:
+            raise ValueError("decoder_channels must be positive")
+        self.projections = torch.nn.ModuleList(
+            [
+                torch.nn.Sequential(
+                    torch.nn.Conv2d(int(channels), decoder_channels, kernel_size=1),
+                    torch.nn.BatchNorm2d(decoder_channels),
+                    torch.nn.GELU(),
+                )
+                for channels in hidden_sizes
+            ]
+        )
+        self.fusion = torch.nn.Sequential(
+            torch.nn.Conv2d(
+                decoder_channels * len(hidden_sizes),
+                decoder_channels,
+                kernel_size=3,
+                padding=1,
+                bias=False,
+            ),
+            torch.nn.BatchNorm2d(decoder_channels),
+            torch.nn.GELU(),
+            torch.nn.Dropout2d(dropout),
+        )
+
+    def forward(self, hidden_states: Sequence[torch.Tensor]) -> torch.Tensor:
+        if len(hidden_states) != len(self.projections):
+            raise ValueError(
+                f"Expected {len(self.projections)} encoder stages, got {len(hidden_states)}"
+            )
+        if any(state.ndim != 4 for state in hidden_states):
+            raise ValueError("SegFormer factorization requires NCHW encoder hidden states")
+        target_size = hidden_states[0].shape[-2:]
+        projected = []
+        for state, projection in zip(hidden_states, self.projections):
+            feature = projection(state)
+            if feature.shape[-2:] != target_size:
+                feature = F.interpolate(
+                    feature, size=target_size, mode="bilinear", align_corners=False
+                )
+            projected.append(feature)
+        return self.fusion(torch.cat(projected, dim=1))
+
+
+class ObjectConditionedStateHead(torch.nn.Module):
+    """Predict separate building and road states conditioned on object posterior."""
+
+    def __init__(
+        self,
+        channels: int,
+        *,
+        conditional: bool,
+        detach_object_posterior: bool,
+    ) -> None:
+        super().__init__()
+        self.conditional = conditional
+        self.detach_object_posterior = detach_object_posterior
+        state_channels = CONDITIONAL_STATE_CHANNELS if conditional else 2
+        self.object_conditioner = (
+            torch.nn.Conv2d(2, channels, kernel_size=1) if conditional else None
+        )
+        self.refinement = torch.nn.Sequential(
+            torch.nn.Conv2d(channels, channels, kernel_size=3, padding=1, bias=False),
+            torch.nn.BatchNorm2d(channels),
+            torch.nn.GELU(),
+        )
+        self.classifier = torch.nn.Conv2d(channels, state_channels, kernel_size=1)
+
+    def forward(
+        self, features: torch.Tensor, object_logits: torch.Tensor
+    ) -> torch.Tensor:
+        if self.conditional:
+            object_posterior = torch.softmax(object_logits, dim=1)[:, 1:3]
+            if self.detach_object_posterior:
+                object_posterior = object_posterior.detach()
+            assert self.object_conditioner is not None
+            features = features + self.object_conditioner(object_posterior)
+        return self.classifier(self.refinement(features))
+
+
+class ConditionalStateFactorizationWrapper(torch.nn.Module):
+    """SegFormer with a feature-level conditional object/state factorization path."""
+
+    def __init__(
+        self,
+        base_model: torch.nn.Module,
+        *,
+        hidden_sizes: Sequence[int],
+        decoder_channels: int = 64,
+        dropout: float = 0.1,
+        state_mode: str = "conditional",
+        detach_object_posterior: bool = False,
+        fusion_weight: float = 0.0,
+    ) -> None:
+        super().__init__()
+        if not hasattr(base_model, "segformer") or not hasattr(base_model, "decode_head"):
+            raise TypeError("Feature factorization requires a SegFormer segmentation model")
+        if state_mode not in {"shared", "conditional"}:
+            raise ValueError("state_mode must be 'shared' or 'conditional'")
+        if not 0.0 <= fusion_weight <= 1.0:
+            raise ValueError("fusion_weight must be in [0, 1]")
+        self.base_model = base_model
+        self.factor_decoder = MultiScaleFactorDecoder(
+            hidden_sizes,
+            decoder_channels=decoder_channels,
+            dropout=dropout,
+        )
+        self.object_head = torch.nn.Conv2d(
+            decoder_channels, AUXILIARY_HEAD_NUM_LABELS["object"], kernel_size=1
+        )
+        self.state_head = ObjectConditionedStateHead(
+            decoder_channels,
+            conditional=state_mode == "conditional",
+            detach_object_posterior=detach_object_posterior,
+        )
+        self.fusion_weight = fusion_weight
+
+    def forward(self, image: torch.Tensor) -> SegmentationModelOutput:
+        encoder_output = self.base_model.segformer(
+            pixel_values=image,
+            output_hidden_states=True,
+            return_dict=True,
+        )
+        hidden_states = encoder_output.hidden_states
+        if hidden_states is None:
+            raise RuntimeError("SegFormer encoder did not return hidden states")
+        semantic_direct = self.base_model.decode_head(hidden_states)
+        factor_features = self.factor_decoder(hidden_states)
+        object_logits = self.object_head(factor_features)
+        state_logits = self.state_head(factor_features, object_logits)
+        if object_logits.shape[-2:] != semantic_direct.shape[-2:]:
+            object_for_composition = F.interpolate(
+                object_logits,
+                size=semantic_direct.shape[-2:],
+                mode="bilinear",
+                align_corners=False,
+            )
+            state_for_composition = F.interpolate(
+                state_logits,
+                size=semantic_direct.shape[-2:],
+                mode="bilinear",
+                align_corners=False,
+            )
+        else:
+            object_for_composition = object_logits
+            state_for_composition = state_logits
+        hierarchical = compose_hierarchical_probabilities(
+            object_for_composition, state_for_composition
+        )
+        logits = fuse_semantic_and_hierarchical_logits(
+            semantic_direct,
+            hierarchical,
+            fusion_weight=self.fusion_weight,
+        )
+        return SegmentationModelOutput(
+            logits=logits,
+            auxiliary={
+                "semantic_direct": semantic_direct,
+                "object": object_logits,
+                "state": state_logits,
+                "hierarchical": hierarchical,
+            },
+        )
+
+
 def segformer_dependency_status() -> dict[str, bool]:
     return {
         package: importlib.util.find_spec(package) is not None
@@ -183,6 +367,31 @@ def build_model(model_config: Mapping[str, Any]) -> torch.nn.Module:
     name = str(model_config.get("name", "segformer_b0"))
     if name == "segformer_b0":
         model = build_segformer_b0(model_config)
+        factorization = model_config.get("state_factorization", {})
+        if factorization and bool(factorization.get("enabled", False)):
+            feature_source = str(
+                factorization.get("feature_source", "encoder_multiscale")
+            )
+            if feature_source == "logits":
+                return LogitAuxiliaryWrapper(
+                    model,
+                    num_labels=int(model_config.get("num_labels", len(CLASS_NAMES))),
+                    enabled_auxiliary_heads=tuple(
+                        model_config.get("auxiliary_heads", ("object", "state"))
+                    ),
+                )
+            hidden_sizes = tuple(int(value) for value in model.config.hidden_sizes)
+            return ConditionalStateFactorizationWrapper(
+                model,
+                hidden_sizes=hidden_sizes,
+                decoder_channels=int(factorization.get("decoder_channels", 64)),
+                dropout=float(factorization.get("dropout", 0.1)),
+                state_mode=str(factorization.get("state_mode", "conditional")),
+                detach_object_posterior=bool(
+                    factorization.get("detach_object_posterior", False)
+                ),
+                fusion_weight=float(factorization.get("fusion_weight", 0.0)),
+            )
         enabled_auxiliary_heads = tuple(model_config.get("auxiliary_heads", ()))
         if enabled_auxiliary_heads:
             model = LogitAuxiliaryWrapper(

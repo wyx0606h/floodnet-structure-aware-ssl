@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 from .constants import IGNORE_INDEX, NUM_CLASSES
 from .models import SegmentationModelOutput, extract_logits
-from .state_factorization import state_factorization_loss
+from .state_factorization import state_factorization_terms
 
 
 def multiclass_dice_loss(
@@ -75,9 +75,26 @@ def supervised_objective(
 ) -> torch.Tensor:
     """Compute semantic loss plus any enabled config-gated auxiliary losses."""
 
+    return supervised_objective_components(
+        output,
+        target,
+        config,
+        ignore_index=ignore_index,
+    )["total"]
+
+
+def supervised_objective_components(
+    output: object,
+    target: torch.Tensor,
+    config: Mapping[str, Any] | None = None,
+    *,
+    ignore_index: int = IGNORE_INDEX,
+) -> dict[str, torch.Tensor]:
+    """Compute and expose loss terms for experiment diagnostics."""
+
     config = dict(config or {})
     logits = extract_logits(output)
-    total = segmentation_loss(
+    semantic = segmentation_loss(
         logits,
         target,
         config.get("loss"),
@@ -86,13 +103,20 @@ def supervised_objective(
     modules = config.get("modules", {})
     state_config = modules.get("state_factorization", {}) if isinstance(modules, Mapping) else {}
     auxiliary = output.auxiliary if isinstance(output, SegmentationModelOutput) else {}
-    total = total + state_factorization_loss(
+    factorization = state_factorization_terms(
         semantic_logits=logits,
         auxiliary=auxiliary,
         target=target,
         config=state_config,
         ignore_index=ignore_index,
     )
-    return total
+    return {
+        "total": semantic + factorization["total"],
+        "semantic": semantic,
+        "factorization": factorization["total"],
+        "object": factorization["object"],
+        "state": factorization["state"],
+        "consistency": factorization["consistency"],
+    }
 
 
