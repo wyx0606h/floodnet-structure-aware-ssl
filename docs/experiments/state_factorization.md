@@ -137,7 +137,7 @@ JS 默认按真值类别先分别求均值、再跨出现类别平均，防止 G
 
 ## 5. 配置
 
-完整配置位于 `configs/segformer_b0_sup398_state_factorization.yaml`：
+S1-S4 均已冻结为独立 YAML。完整 S4 配置位于 `configs/segformer_b0_sup398_state_factorization.yaml`：
 
 ```yaml
 model:
@@ -164,18 +164,17 @@ modules:
 
 原 `segformer_b0_sup398.yaml` 与 `segformer_b0_full1445.yaml` 不包含开关，关闭模块时仍走原监督基线路径。
 
-旧 logit-head 对照不需要保留旧代码分支，只需在同一配置中改为：
-
-```yaml
-model:
-  state_factorization:
-    enabled: true
-    feature_source: logits
-    state_mode: shared
-    fusion_weight: 0.0
-```
+| ID | 配置文件 | 唯一改动轴 |
+|---|---|---|
+| S0 | `configs/segformer_b0_sup398.yaml` | 无模块基线 |
+| S1 | `configs/segformer_b0_sup398_state_s1_logit_shared.yaml` | logits 特征、共享状态、无融合 |
+| S2 | `configs/segformer_b0_sup398_state_s2_feature_shared.yaml` | 多尺度特征、共享状态、无融合 |
+| S3 | `configs/segformer_b0_sup398_state_s3_feature_conditional.yaml` | 多尺度特征、条件状态、无融合 |
+| S4 | `configs/segformer_b0_sup398_state_factorization.yaml` | 多尺度特征、条件状态、融合 0.25 |
 
 配置校验会拒绝 `logits + conditional` 或 `logits + fusion`，防止把一个没有条件特征和组合推理能力的对照误写成完整方法。
+
+单元测试逐字段确认 S1-S4 与 S0 的 `dataset`、`data`、主损失、训练策略、评估策略、seed 以及 SegFormer-B0 主配置完全一致；四个实验的辅助损失权重也完全一致。允许变化的只有实验标识/输出目录以及 `feature_source`、`state_mode`、`fusion_weight` 三个预注册方法轴。
 
 ## 6. 严格消融与控制变量
 
@@ -190,7 +189,7 @@ model:
 | S4 | 检验结构参与推理 | encoder multiscale | conditional | 0.25 |
 | S5 | 排除普通参数增益（最终主张门禁） | encoder multiscale | 参数量匹配的普通辅助 10 类头 | 0 |
 
-在 S3/S4 之间再分别关闭 object loss、state loss 和 JS，确认最终收益不是某一个普通辅助损失单独造成。S0-S4 已由当前 YAML 开关支持；S5 只在 S3/S4 通过 pilot 后实现并冻结，避免在核心假设尚未成立时扩张实验。只有 S3 显著优于 S2，才能支持“状态需要以物体为条件”的机制主张；只有 S2/S3 优于 S5，才能弱化“只是参数更多”的替代解释。
+在 S3/S4 之间再分别关闭 object loss、state loss 和 JS，确认最终收益不是某一个普通辅助损失单独造成。S0-S4 已有独立 YAML；S5 只在 S3/S4 通过 pilot 后实现并冻结，避免在核心假设尚未成立时扩张实验。只有 S3 显著优于 S2，才能支持“状态需要以物体为条件”的机制主张；只有 S2/S3 优于 S5，才能弱化“只是参数更多”的替代解释。
 
 超参只允许在 Validation 上选择。第一轮不同时扫描 loss weight、decoder width、fusion weight 和 dropout；建议先固定 loss 与 width，仅比较 `fusion_weight in {0, 0.25}`。若 pilot 有效，再在 Validation 上做最小范围敏感性分析，并对冻结配置运行三个 seed。
 
@@ -217,18 +216,30 @@ model:
 
 ## 8. 运行入口
 
-本地/服务器预检：
+本地/服务器预检以 S1 为第一项：
 
 ```powershell
 python train.py `
-  --config configs/segformer_b0_sup398_state_factorization.yaml `
+  --config configs/segformer_b0_sup398_state_s1_logit_shared.yaml `
   --supervised-root F:\FloodNet `
   --dry-run
 ```
 
-Linux 服务器训练：
+Linux 服务器按 S1 -> S2 -> S3 -> S4 依次训练，每次先运行 `--dry-run`：
 
 ```bash
+python train.py \
+  --config configs/segformer_b0_sup398_state_s1_logit_shared.yaml \
+  --supervised-root /path/to/FloodNet-Supervised_v1.0
+
+python train.py \
+  --config configs/segformer_b0_sup398_state_s2_feature_shared.yaml \
+  --supervised-root /path/to/FloodNet-Supervised_v1.0
+
+python train.py \
+  --config configs/segformer_b0_sup398_state_s3_feature_conditional.yaml \
+  --supervised-root /path/to/FloodNet-Supervised_v1.0
+
 python train.py \
   --config configs/segformer_b0_sup398_state_factorization.yaml \
   --supervised-root /path/to/FloodNet-Supervised_v1.0

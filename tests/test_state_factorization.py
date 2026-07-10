@@ -20,6 +20,13 @@ from floodnet_ssl.state_factorization import (
     state_factorization_terms,
 )
 
+STATE_ABLATION_CONFIGS = {
+    "S1": "configs/segformer_b0_sup398_state_s1_logit_shared.yaml",
+    "S2": "configs/segformer_b0_sup398_state_s2_feature_shared.yaml",
+    "S3": "configs/segformer_b0_sup398_state_s3_feature_conditional.yaml",
+    "S4": "configs/segformer_b0_sup398_state_factorization.yaml",
+}
+
 
 class _FakeEncoder(torch.nn.Module):
     def __init__(self) -> None:
@@ -198,6 +205,59 @@ class StateFactorizationTest(unittest.TestCase):
         factorization["state_mode"] = "conditional"
         with self.assertRaises(ConfigError):
             validate_supervised_config(config)
+
+    def test_ablation_configs_match_sup398_control_variables(self) -> None:
+        baseline = load_yaml_config("configs/segformer_b0_sup398.yaml")
+        configs = {
+            name: load_yaml_config(path)
+            for name, path in STATE_ABLATION_CONFIGS.items()
+        }
+        for name, config in configs.items():
+            with self.subTest(ablation=name):
+                self.assertEqual(baseline["dataset"], config["dataset"])
+                self.assertEqual(baseline["data"], config["data"])
+                self.assertEqual(baseline["loss"], config["loss"])
+                self.assertEqual(baseline["training"], config["training"])
+                self.assertEqual(baseline["evaluation"], config["evaluation"])
+                self.assertEqual(
+                    baseline["experiment"]["seed"], config["experiment"]["seed"]
+                )
+                self.assertEqual(
+                    baseline["experiment"]["kind"], config["experiment"]["kind"]
+                )
+                for key, value in baseline["model"].items():
+                    self.assertEqual(value, config["model"][key])
+
+        reference_modules = configs["S1"]["modules"]
+        for name, config in configs.items():
+            with self.subTest(module_weights=name):
+                self.assertEqual(reference_modules, config["modules"])
+
+    def test_ablation_configs_change_only_the_intended_method_axis(self) -> None:
+        configs = {
+            name: load_yaml_config(path)
+            for name, path in STATE_ABLATION_CONFIGS.items()
+        }
+        expected = {
+            "S1": ("logits", "shared", 0.0),
+            "S2": ("encoder_multiscale", "shared", 0.0),
+            "S3": ("encoder_multiscale", "conditional", 0.0),
+            "S4": ("encoder_multiscale", "conditional", 0.25),
+        }
+        run_ids = set()
+        output_dirs = set()
+        for name, config in configs.items():
+            factorization = config["model"]["state_factorization"]
+            actual = (
+                factorization["feature_source"],
+                factorization["state_mode"],
+                factorization["fusion_weight"],
+            )
+            self.assertEqual(expected[name], actual)
+            run_ids.add(config["experiment"]["run_id"])
+            output_dirs.add(config["experiment"]["output_dir"])
+        self.assertEqual(len(configs), len(run_ids))
+        self.assertEqual(len(configs), len(output_dirs))
 
 
 if __name__ == "__main__":
