@@ -216,3 +216,9 @@ Interpretation:
 4. Background IoU remains weak in both settings, so future tables should report both mIoU-10 and mIoU-9.
 
 Gate decision: the supervised comparison stage is sufficient to start fixed-seed supervised structure ablations. The next run should be `exp/state-factorization`, followed by `exp/boundary-context`. SSL experiments should still begin with an EMA confidence-only baseline before any structure-aware pseudo-label claim.
+
+## 10. 2026-07-11 State-Factorization Execution Freeze
+
+The state-factorization branch has advanced beyond the original logit-head prototype. Commit `f67f4e3` preserves the flat SegFormer decoder, adds a separate multi-scale factor decoder, object-conditioned building/road state experts, exact conditional probability composition, class-balanced consistency, and optional log-space fusion. Commit `76fbeb7` freezes four independent S1-S4 YAML configurations. The branch passed 64 unit tests and all four dry-runs, but no real-model forward or training result is claimed.
+
+The next server action is therefore not SSL and not `full1445 + state-factorization`. Pull `origin/exp/state-factorization`, run a real-model/short-step smoke, then train S1 on the fixed `sup398` protocol. Continue S2 -> S3 -> S4 only with the frozen configs and distinct output directories. S1 is a logit/shared-state control; the conditional method claim depends on S3 outperforming S2 and ultimately surviving an extra-parameter control and multi-seed confirmation.

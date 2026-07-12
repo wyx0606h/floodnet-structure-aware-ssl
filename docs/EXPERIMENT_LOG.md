@@ -114,3 +114,22 @@ Validation 只用于 checkpoint 选择；论文或报告中优先使用 `test_be
 3. EMA confidence-only SSL baseline；
 4. structure-aware pseudo-label filtering。
 
+## 2026-07-11 监督结果证据复核与状态分解交接
+
+- 重新读取 `F:\floodnet_output` 中两组 `config_resolved.yaml`、训练摘要、40000 行 history、Validation 指标、`test_best` JSON/CSV 和运行环境信息；未改动原始文件。
+- 两组均完成 40000 optimizer steps，Test 均为 448 张；`sup398` 最佳 Validation mIoU-10 为 49.88（iter 18000），`full1445` 为 56.73（iter 32000）。
+- Test 主结果维持原记录：`sup398` mIoU-10/mIoU-9/Affected mIoU 为 47.67/52.77/34.34；`full1445` 为 52.74/57.75/38.10。
+- 10 个类别 IoU 在 `full1445` 中均高于 `sup398`，但 Building-flooded 和 Road-flooded 的 precision 分别下降 4.58 和 11.46 点，收益主要伴随 recall 提升，不能写成无条件的全面改善。
+- Boundary F1 均值仅增加 0.49 点；逐图配对中 448 张仅 200 张提高，中位数变化 -0.19 点。该观察支持继续做边界消融，但不预设边界模块必然有效。
+- 预训练来源存在记录粒度差异：`sup398` 记录模型 ID，`full1445` 记录 snapshot `80983a413c30d36a39c20203974ae7807835e2b4`。后续应统一固定 snapshot 或记录权重 checksum。
+- 下一步从远程 `exp/state-factorization` 开始，先做真实模型/小步 smoke，再运行冻结的 S1；通过完整性检查后依次 S2 -> S3 -> S4。
+
+## 2026-07-12 推送前代码与配置复核
+
+- `exp/state-factorization` 本地 HEAD 与 `origin/exp/state-factorization` 均为 `76fbeb7`，不存在代码漂移。
+- 完整单元测试重新运行：64/64 通过。
+- S1-S4 四个配置重新 dry-run：均解析为 `sup398`、train=398、Validation=450，且未构建模型、未启动训练。
+- 方法轴再次确认：S1=`logits/shared/0`，S2=`encoder_multiscale/shared/0`，S3=`encoder_multiscale/conditional/0`，S4=`encoder_multiscale/conditional/0.25`。
+- 人工复核了模型包装、概率组合、融合、all-ignore 状态损失、辅助损失与训练 history/checkpoint 接线，未发现阻断服务器 smoke/S1 的代码问题。
+- 本机仍未执行真实 HuggingFace SegFormer CUDA forward；服务器必须先完成真实模型/50-100 step smoke，不能把 dry-run 当成性能证据。
+

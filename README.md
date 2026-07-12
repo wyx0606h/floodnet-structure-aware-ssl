@@ -28,7 +28,9 @@ docs/research/innovation_plan.md
 docs/experiments/control_variable_review.md
 ```
 
-当前阶段门禁仍然是完成 `sup398` 与 `full1445` 监督比较。不要在监督比较完成前启动正式 SSL 主实验。
+当前 `sup398` 与 `full1445` 的固定 seed 监督比较已完成并通过结构消融门禁。下一步位于 `exp/state-factorization`：先做真实模型/小步 smoke，再按冻结配置运行 S1 -> S2 -> S3 -> S4。S1 是 logit/shared-state 控制实验，不是完整方法。完成监督结构消融前不启动正式 SSL 主实验。
+
+监督结果和下一步协议见 `docs/experiments/supervised_comparison_results.md` 与 `docs/experiments/state_factorization.md`。
 
 ## 环境安装
 

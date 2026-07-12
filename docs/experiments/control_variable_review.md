@@ -1,6 +1,8 @@
 # 三个结构模块的控制变量审查
 
 日期：2026-07-03
+
+最近复核：2026-07-11
 审查对象：`exp/state-factorization`、`exp/boundary-context`、`exp/structure-aware-pl`
 当前进度：`sup398` 与 `full1445` 两个监督实验的 first-seed run 已完成，`test_best` 结果已整理到 `docs/experiments/supervised_comparison_results.md`。
 
@@ -35,25 +37,29 @@
 ## 3. State Factorization 审查
 
 分支：`exp/state-factorization`
-提交：`8332c34`
+方法提交：`f67f4e3`
+
+冻结配置提交：`76fbeb7`
 
 ### 符合严谨性的点
 
-- 只在 `sup398` 监督路径上增加 object/state 辅助目标，主语义 10 类输出仍保留。
+- 主语义 10 类输出保留；完整方法另建多尺度因子解码器，不替换原 SegFormer 语义路径。
 - 标签分解完全由原 mask 派生，不引入外部标注。
 - 非 building/road 像素的 state target 使用 ignore，不会错误监督状态。
-- 模块权重较小，避免把主任务改造成状态二分类。
-- 测试覆盖了标签映射、概率组合、损失可反传和关闭行为。
+- 建筑与道路使用各自的条件状态专家，并按概率链式法则组合十类层次分布。
+- S1-S4 独立 YAML 已冻结，自动审计只允许 `feature_source`、`state_mode`、`fusion_weight` 三个方法轴变化。
+- 64 项单元测试和四个 dry-run 已通过；尚无真实 forward 或训练结果。
 
 ### 需要注意的点
 
-- 当前辅助头从语义 logits 派生，是低侵入轻量实现。它适合第一轮控制变量实验，但不能宣称为完整 decoder-level 多任务结构。
-- 消融要按 `object only`、`object+state`、`object+state+JS` 展开，否则无法判断收益来自哪个部分。
+- S1 从语义 logits 派生，只是标签重编码/普通多任务控制；S2-S4 才逐步引入多尺度特征、条件状态与推理融合。
+- 必须按 S1 -> S2 -> S3 -> S4 运行；不能只跑完整 S4 后与 S0 比较。
+- 若 S3/S4 通过 pilot，再增加参数量匹配的普通辅助头 S5，排除额外参数解释。
 - 如果 mIoU 下降但 state macro-F1 上升，应判为 trade-off，而不是直接判为有效提升。
 
 ### 审查结论
 
-该分支符合当前监督阶段控制变量要求，优先级最高。
+该分支已达到服务器 smoke 和固定 seed S1 的代码门禁，优先级最高。代码就绪不等于方法有效，任何收益主张必须等待真实训练。
 
 ## 4. Boundary Context 审查
 
@@ -122,7 +128,7 @@
 
 1. 完成 `sup398` 与 `full1445` 监督训练：已完成 first-seed run。Validation 曲线正常，best checkpoint 只由 Validation 选择，Test 只最终评估。当前结果支持进入结构模块 pilot。
 2. 做监督错误分析：比较 `sup398` 与 `full1445` 在 flooded building、flooded road、building/road 边界、水体混淆上的差异，明确后续结构模块要解决的主要错误类型。
-3. 跑 `state-factorization` 监督消融：按 `object only`、`object + state`、`object + state + JS consistency` 展开。若只提升 state macro-F1 但不提升 affected mIoU 或主 mIoU，应视为诊断性收益而非主贡献。
+3. 跑 `state-factorization` 监督消融：服务器先做真实模型/小步 smoke，再按冻结配置执行 S1 logit-shared、S2 feature-shared、S3 feature-conditional、S4 feature-conditional-fusion。若只提升 state macro-F1 但不提升 affected mIoU 或主 mIoU，应视为诊断性收益而非主贡献。
 4. 跑 `boundary-context` 监督消融：先跑 `boundary loss only`，再跑 `boundary loss + semantic-boundary consistency`，最后跑完整 `boundary context refinement`。必须区分收益来自边界辅助监督还是上下文建模。
 5. 生成监督阶段可视化：包含 per-class IoU 差值柱状图、flooded/non-flooded 混淆矩阵、边界预测图、典型成功/失败案例。这一步用于判断论文机制是否成立，而不是只看总 mIoU。
 6. 启动半监督前置审计：使用 `sup398` teacher 在 1047 张 unlabeled 图像上生成伪标签，先不训练 student，比较 confidence-only 与结构分数在 matched coverage 下的伪标签质量。隐藏 mask 只允许用于这个离线分析。

@@ -101,3 +101,18 @@ training:
 
 如果 `sup398` 与 `full1445` 在 40000 steps 末期都仍明显上升，可统一延长 `max_iterations`。不得只延长其中一组。
 
+## 固定 seed pilot 的报告规则
+
+- 当前 `sup398`、`full1445` 和第一轮结构消融使用 seed `20260702` 的单次运行值，表格直接报告单值。
+- 不得把单次结果写成 average、mean、mean +/- std、稳定提升或显著提升。
+- 所有可比 pilot 固定 split、seed、训练长度、优化器、Validation checkpoint selection 和 Test policy。
+- 最终核心方法与关键 baseline 按项目规范补三个 seed，并报告 mean +/- std；若因算力未完成，论文需明确写固定 seed 单次运行的限制。
+
+## 状态分解 S1-S4 评估规则
+
+- 实际代码位于 `exp/state-factorization`，冻结配置提交为 `76fbeb7`。
+- 执行顺序固定为 S1 logit-shared -> S2 feature-shared -> S3 feature-conditional -> S4 feature-conditional-fusion。
+- 长训练前必须通过真实模型 forward 和 50-100 step smoke；smoke 结果不能作为方法性能结果。
+- Validation 用于 checkpoint 选择与配置判断；为减少测试集反馈，S1-S4 完成 Validation 比较并冻结方案后再统一运行 Test。
+- `full1445` 仅是监督参考上界；状态分解第一轮全部使用 `sup398`，无需运行 `full1445 + state-factorization`。
+

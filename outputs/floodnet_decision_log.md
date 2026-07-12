@@ -37,6 +37,12 @@
 | D029 | 2026-06-27 | Active | Week 1 仅实现网络骨架、统一模型输出和可扩展多头接口，不提前实现真实层次损失、边界损失、关系模块或伪标签筛选 | 当前阶段门仍是四图过拟合与监督 baseline；先稳定服务器训练所需的模型 factory 和输出契约，避免方法模块走在监督/半监督证据之前 | 辅助头默认禁用；真实 object/state、boundary、relation 模块分别按 Week 3/4/5 gate 和新决策追加后再启用 |
 | D030 | 2026-06-27 | Active | Week 1 服务器准备补齐独立 checkpoint 评估、run 汇总和只读服务器环境检查脚本，并增强训练脚本的运行元数据记录 | 到服务器后需要训练、评估、汇总、登记的最短闭环，避免手工翻日志或临时拼命令；这些脚本不改变数据协议、不启动半监督模块 | 新脚本默认不训练、不安装依赖；评估只使用本地 278/60/60 manifest 中有公开 mask 的 split；官方 Validation/Test 仍不得作为本地 GT |
 | D031 | 2026-07-02 | Active | 主数据协议升级为 `F:\FloodNet\FloodNet-Supervised_v1.0` 的官方 supervised split：Train 1445、Validation 450、Test 448 均有分割 mask；旧 398-mask challenge release 与 278/60/60 split 仅保留为历史审计产物 | 用户提供了更完整的 FloodNet supervised 数据；只读审计确认 train/val/test 图像与 mask 一一配对、无跨 split ID 重叠，且 Validation/Test 有公开 mask，可直接用于本地定量评估 | 所有主训练/评估配置改用 `splits/floodnet_supervised_v1/manifest.csv`；少标注实验以 1445 张 official train 为母集隐藏标签；不得把旧 278/60/60 结果与新协议直接横向比较 |
+| D032 | 2026-07-02 | Active | 新增统一监督协议 `sup398` 与 `full1445`，并通过 `train.py`、`evaluate.py` 和 `tools/build_floodnet_splits.py` 统一入口执行；两组监督实验除训练标签数量外保持模型、预训练权重、损失、优化器、增强、crop、batch、max_iterations、val/test、指标、推理方式和 seed 一致 | 需要公平比较 Challenge 官方 398 标签训练与完整 1445 标签训练的差异，同时为后续 `ssl398_1047` 预留无标签池、EMA teacher 和伪标签结构 | 本轮只实现监督入口、split 构建、CE+Dice、max_iterations、统一评估和文档；不得实现完整半监督训练；Challenge 398 名单必须从 Challenge 版数据读取，不得随机生成 |
+| D033 | 2026-07-02 | Active | `sup398` 与 `full1445` 统一采用 SegFormer-B0、ImageNet 预训练、CE+Dice、AdamW、poly scheduler、1000-step warmup、gradient clip 1.0、512 crop、有效 batch size 8、40000 optimizer steps、每 2000 steps validation；第一版关闭类别感知裁剪并允许服务器下载 `nvidia/mit-b0` | 保证两组监督实验除训练标签数量外尽可能一致；避免 pilot 实验和类别感知采样引入额外变量；适配 FloodNet 高分辨率与 RTX 4090 训练环境 | `max_iterations` 必须按 optimizer step 统计；若 40000 steps 末期两组都仍明显上升，只能统一延长；Test 只在配置冻结后评估 |
+| D034 | 2026-07-02 | Active | 从共同 main 计划提交创建 `exp/state-factorization`、`exp/boundary-context` 与 `exp/structure-aware-pl` 三个独立实验分支；新增功能均由配置开关控制 | 隔离三个可独立验证的研究假设，防止未验证模块污染监督基线 | 分支不得提交数据、权重或训练输出；任何结果必须登记后再形成主张 |
+| D035 | 2026-07-04 | Active | 算力受限的 pilot 透明报告固定 seed 单次运行值；不得虚构 mean/std，最终核心方法按项目规范补三 seed | 首批监督结果可建立实验坐标系，但单次运行不能支持方差或显著性结论 | 表格不得使用 average、mean、std、显著或稳定提升等措辞，除非对应统计实际完成 |
+| D036 | 2026-07-10 | Active | 状态分解升级为保留平坦语义解码器的条件物体-状态因子化：独立多尺度因子特征、建筑/道路条件状态专家、概率链式组合及可选 log-space fusion | 初版 logit 头可能退化为线性标签重编码，全局状态头也忽略不同物体的状态外观差异 | 固定数据与训练协议；必须比较 logit/feature、shared/conditional、no-fusion/fusion，并在通过 pilot 后增加参数量匹配控制 |
+| D037 | 2026-07-10 | Active | 冻结 S1-S4 独立 YAML，执行顺序为 S1 logit-shared、S2 feature-shared、S3 feature-conditional、S4 feature-conditional-fusion | 避免手工改配置和输出覆盖，并建立可归因的逐步消融 | 长训练前真实模型 smoke；Validation 选 checkpoint/配置，Test 不调参；S3/S4 通过后才实现 S5 参数量匹配控制 |
 
 ## 新决定模板
 
@@ -52,5 +58,3 @@
 - 需要新增或重跑的实验：
 - 何时复审：
 ```
-| D032 | 2026-07-02 | Active | 新增统一监督协议 `sup398` 与 `full1445`，并通过 `train.py`、`evaluate.py` 和 `tools/build_floodnet_splits.py` 统一入口执行；两组监督实验除训练标签数量外保持模型、预训练权重、损失、优化器、增强、crop、batch、max_iterations、val/test、指标、推理方式和 seed 一致 | 需要公平比较 Challenge 官方 398 标签训练与完整 1445 标签训练的差异，同时为后续 `ssl398_1047` 预留无标签池、EMA teacher 和伪标签结构 | 本轮只实现监督入口、split 构建、CE+Dice、max_iterations、统一评估和文档；不得实现完整半监督训练；Challenge 398 名单必须从 Challenge 版数据读取，不得随机生成 |
-| D033 | 2026-07-02 | Active | `sup398` 与 `full1445` 统一采用 SegFormer-B0、ImageNet 预训练、CE+Dice、AdamW、poly scheduler、1000-step warmup、gradient clip 1.0、512 crop、有效 batch size 8、40000 optimizer steps、每 2000 steps validation；第一版关闭类别感知裁剪并允许服务器下载 `nvidia/mit-b0` | 保证两组监督实验除训练标签数量外尽可能一致；避免 pilot 实验和类别感知采样引入额外变量；适配 FloodNet 高分辨率与 RTX 4090 训练环境 | `max_iterations` 必须按 optimizer step 统计；若 40000 steps 末期两组都仍明显上升，只能统一延长；Test 只在配置冻结后评估 |
